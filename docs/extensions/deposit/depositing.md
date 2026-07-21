@@ -13,12 +13,16 @@ one](./updating) uses the same staging surface with a different entry point.
 
 The deposit's lifecycle:
 
-```
-open --finalise--> finalising --success--> complete   (terminal)
-  ^                    |
-  |<--validation fails-+        (errors recorded on the deposit)
-  |
-  +--abort / expiry--> aborted  (terminal)
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> open
+    open --> finalising: finalise
+    finalising --> open: validation fails
+    finalising --> complete: success
+    open --> aborted: abort / expiry
+    complete --> [*]
+    aborted --> [*]
 ```
 
 Deposits are single-use: once `complete`, further changes open a new deposit.
@@ -114,6 +118,8 @@ Content-Type: application/json
   "mediaType": "audio/x-wav"
 }
 ```
+
+Responds `200` with the upload target:
 
 ```json
 {

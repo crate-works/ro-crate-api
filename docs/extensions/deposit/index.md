@@ -27,7 +27,9 @@ objects without a deposit pathway is not a state this specification supports.
 ## Why Storage Objects, Not Entity Writes
 
 A single RO-Crate routinely describes many catalog entities — a collection,
-its subcollections, its items, and every file they contain. Entity-granular
+its items, every file they contain, and the people and organisations
+connected to them; the entity model is extensible, so the list doesn't end
+there. Entity-granular
 write endpoints would force depositors to decompose a crate they already have
 into a sequence of per-entity calls, and force the API to referee partial
 failures across that sequence.
@@ -55,8 +57,8 @@ rules can differ:
   Materialisation yields the item entity plus one file entity per media
   file — a small, fixed shape.
 - **LDaCA**: a storage object may be a whole corpus crate. Materialisation
-  explodes it into a collection entity, subcollection entities, item
-  entities, and file entities — one deposit, many entities.
+  explodes it into collection, item, file, person, and organisation
+  entities — one deposit, many entities.
 
 Materialisation can also be **many-to-one**: several storage objects may
 contribute to a single merged entity. If two deposited crates both describe

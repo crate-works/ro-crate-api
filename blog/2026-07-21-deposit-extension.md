@@ -16,7 +16,9 @@ implementation materialises catalog entities by its own rules.
 ## Why storage objects, not entity writes
 
 A single RO-Crate routinely describes many catalog entities — a collection,
-its subcollections, its items, and every file they contain. Entity-granular
+its items, every file they contain, and the people and organisations
+connected to them; the entity model is extensible, so the list doesn't end
+there. Entity-granular
 write endpoints would force depositors to decompose a crate they already hold
 into a sequence of per-entity calls, and force the API to referee partial
 failures across that sequence.
@@ -26,8 +28,8 @@ the unit of deposit. Depositors send storage objects; the implementation
 materialises entities from them, and entities remain read-only projections.
 How materialisation works is implementation-defined — PARADISEC turns one
 item crate into an item entity plus a file entity per media file, while LDaCA
-may explode a whole corpus crate into collections, subcollections, items, and
-files from a single deposit.
+may explode a whole corpus crate into collection, item, file, person, and
+organisation entities from a single deposit.
 
 ## The deposit session
 
