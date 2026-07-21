@@ -38,7 +38,19 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'extensions/index',
       },
-      items: ['extensions/segments', 'extensions/legacy'],
+      items: [
+        'extensions/segments',
+        {
+          type: 'category',
+          label: 'Extension: deposit',
+          link: {
+            type: 'doc',
+            id: 'extensions/deposit/index',
+          },
+          items: ['extensions/deposit/depositing', 'extensions/deposit/updating', 'extensions/deposit/lifecycle'],
+        },
+        'extensions/legacy',
+      ],
     },
     {
       type: 'category',

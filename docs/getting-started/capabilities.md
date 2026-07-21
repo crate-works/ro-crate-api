@@ -14,8 +14,15 @@ it instead of relying on per-archive configuration or probing responses.
 
 ```json
 {
-  "apiVersion": "0.2.0",
-  "extensions": { "segments": {} },
+  "apiVersion": "0.3.0",
+  "extensions": {
+    "segments": {},
+    "deposit": {
+      "idMinting": "both",
+      "fileUpload": ["inline", "presigned"],
+      "tombstonePolicy": "410"
+    }
+  },
   "search": {
     "filters": {
       "inLanguage": { "type": "string", "label": "Language" },

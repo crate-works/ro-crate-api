@@ -50,6 +50,7 @@ consumers a single authoritative definition.
 | Identifier | Adds | Capability details |
 | --- | --- | --- |
 | [`segments`](./segments) | `searchExtra.segments` — structured drill-down locations (PDF pages, time-aligned annotations) for full-text search matches inside files | none |
+| [`deposit`](./deposit/) | Write access through deposit sessions against storage objects — the deposit and storage-object endpoints, plus `storageObjectIds` on Entity and `storageObjectId` on File | `idMinting`, `fileUpload`, `tombstonePolicy`, optional `depositTtlSeconds` and `maxFileSizeBytes` |
 
 ### Legacy Extensions
 

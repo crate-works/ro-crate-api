@@ -25,7 +25,7 @@ An implementation that provides segments declares the extension in
 
 ```json
 {
-  "apiVersion": "0.2.0",
+  "apiVersion": "0.3.0",
   "extensions": {
     "segments": {}
   }
