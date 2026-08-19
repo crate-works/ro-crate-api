@@ -162,7 +162,7 @@ Need detailed endpoint documentation?
 The RO-Crate API specification is developed openly:
 
 - **Specification Repository**:
-  [github.com/Language-Research-Technology/ro-crate-api](https://github.com/Language-Research-Technology/ro-crate-api)
+  [github.com/crate-works/ro-crate-api](https://github.com/crate-works/ro-crate-api)
 - **Issue Tracking**: Report bugs and request features
 - **Discussion**: Join the RO-Crate community discussions
 

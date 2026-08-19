@@ -1,5 +1,5 @@
 {
-  "name": "ro-api",
+  "name": "ro-crate-api",
   "version": "0.0.0",
   "private": true,
   "scripts": {

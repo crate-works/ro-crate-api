@@ -24,7 +24,7 @@ info:
 
     ## Extensions
 
-    The core specification can be extended through a curated registry of extensions defined in this document. Every extension has a stable identifier, a schema, and semantics. Implementations choose which extensions to implement and declare them through the `GET /capabilities` endpoint. Extension properties appear in core schemas as optional fields tagged with an `x-extension` annotation. See the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions) for the full extension model.
+    The core specification can be extended through a curated registry of extensions defined in this document. Every extension has a stable identifier, a schema, and semantics. Implementations choose which extensions to implement and declare them through the `GET /capabilities` endpoint. Extension properties appear in core schemas as optional fields tagged with an `x-extension` annotation. See the [Extensions guide](https://ro-crate-api.crate-works.org/docs/extensions) for the full extension model.
 
     ## Deposits and RO-Crates
 
@@ -34,9 +34,9 @@ info:
 
   contact:
     name: Issues
-    url: https://github.com/Language-Research-Technology/ro-crate-api/issues
+    url: https://github.com/crate-works/ro-crate-api/issues
   x-logo:
-    url: https://language-research-technology.github.io/ro-crate-api/img/logo.webp
+    url: https://ro-crate-api.crate-works.org/img/logo.webp
     altText: RO-Crate API logo
   license:
     name: MIT
@@ -49,7 +49,7 @@ servers:
     description: PARADISEC
 externalDocs:
   description: Find out more about RO-Crate
-  url: https://Language-Research-Technology.github.io/ro-crate-api
+  url: https://ro-crate-api.crate-works.org
 tags:
   - name: capabilities
     description: Endpoint for discovering what an implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides.
@@ -101,7 +101,7 @@ paths:
       description: |
         Declare what this implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides. Every conformant implementation MUST provide this endpoint so that clients can feature-detect rather than relying on per-archive configuration or probing.
 
-        See the [Capabilities guide](https://language-research-technology.github.io/ro-crate-api/docs/getting-started/capabilities) for how clients should use this endpoint, and the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions) for how extensions are registered.
+        See the [Capabilities guide](https://ro-crate-api.crate-works.org/docs/getting-started/capabilities) for how clients should use this endpoint, and the [Extensions guide](https://ro-crate-api.crate-works.org/docs/extensions) for how extensions are registered.
       operationId: getCapabilities
       responses:
         "200":
@@ -249,7 +249,7 @@ paths:
         - entities
       summary: Delete a contributor-less entity
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Delete an entity that no RO-Crate contributes to — its `roCrateIds` is empty. Such entities (for example an Organisation whose last contributing RO-Crate was deleted but which the implementation chose to retain) cannot be reached by any deposit-session operation, so this is the one entity-level write.
 
@@ -985,7 +985,7 @@ paths:
         - deposits
       summary: Create a deposit for a new RO-Crate
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Open a deposit session that will create a new RO-Crate. The RO-Crate comes into existence only at the deposit's first successful finalise — until then nothing is readable and no entities exist.
 
@@ -1069,7 +1069,7 @@ paths:
         - deposits
       summary: Get a deposit
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Retrieve the deposit, including its lifecycle state, the files staged so far with per-file upload status, and the violations recorded by the most recent failed finalise. This is the polling resource for asynchronous finalisation: after a `202` from finalise, poll here until the state leaves `finalising`.
       operationId: getDeposit
@@ -1113,7 +1113,7 @@ paths:
         - deposits
       summary: Abort a deposit
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Abort an `open` deposit, discarding its staged metadata document and files. Aborting is terminal; the RO-Crate is left at its prior version (or never comes into existence for a create deposit).
 
@@ -1163,7 +1163,7 @@ paths:
         - deposits
       summary: Stage the metadata document
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Stage the RO-Crate metadata document for this deposit. This is a full replace — staging a new metadata document discards the previously staged one; there is no metadata PATCH and no metadata DELETE. The metadata document and files may be staged in any order; metadata–file association is checked at finalise.
 
@@ -1229,7 +1229,7 @@ paths:
         - deposits
       summary: Stage a file
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Stage a file in this deposit. `{fileId}` is the file entity's `@id` in the deposited metadata document, percent-encoded — for attached files, its crate-relative path. The metadata document and files may be staged in any order.
 
@@ -1321,7 +1321,7 @@ paths:
         - deposits
       summary: Remove a staged file
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Remove a file staged in this deposit. Valid while the deposit is `open`. This only affects the deposit's staging area — to drop a file from an existing RO-Crate, stage a metadata document that no longer references it.
       operationId: unstageDepositFile
@@ -1377,7 +1377,7 @@ paths:
         - deposits
       summary: Finalise a deposit
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Finalise the deposit: validate the staged content, publish it as the RO-Crate's new current version (replacing the prior version wholesale), and materialise catalog entities from it. Validation depth and materialisation rules are implementation-defined.
 
@@ -1458,7 +1458,7 @@ paths:
         - ro_crates
       summary: List RO-Crates
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         List RO-Crates, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether RO-Crates are a public surface (listable by anyone, with per-object `access` governing metadata-document retrieval) or a depositor-only management surface (requiring the `write` scope).
 
@@ -1516,7 +1516,7 @@ paths:
         - ro_crates
       summary: Get an RO-Crate
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Retrieve an RO-Crate. The body is deliberately lean: identity, the entities materialised from the current version, timestamps, and access. The deposited metadata document — `GET /ro-crate/{id}/metadata` — is the single source of truth for the RO-Crate's content inventory; the RO-Crate carries no file list of its own.
 
@@ -1558,7 +1558,7 @@ paths:
         - ro_crates
       summary: Delete an RO-Crate
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Delete an RO-Crate — its metadata document and files. Deletion is not a deposit session; it is already atomic. Implementations needing slow teardown MAY return `202 Accepted`.
 
@@ -1616,7 +1616,7 @@ paths:
         - ro_crates
       summary: Get the deposited metadata document
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns the original deposited metadata document.
       operationId: getRoCrateMetadata
@@ -1674,7 +1674,7 @@ paths:
         - ro_crates
       summary: Get deposited metadata document headers
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Retrieve the deposited metadata document's headers without downloading the content. Returns the same headers as GET but with no response body, useful for checking availability and caching information.
       operationId: headRoCrateMetadata
@@ -1729,7 +1729,7 @@ paths:
         - deposits
       summary: Create a deposit to update an RO-Crate
       description: |
-        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
         Open a deposit session against an existing RO-Crate. The deposit starts logically empty; the client stages a new metadata document plus only the files that changed. At finalise the new metadata document is the authoritative file manifest — unchanged files are carried forward from the baseline by `@id`, and files absent from the new metadata document drop out. A metadata-only fix is therefore just `PUT /deposit/{id}/metadata` followed by finalise.
 
@@ -2402,7 +2402,7 @@ components:
                 $ref: "#/components/schemas/Segment"
               x-extension: segments
               description: |
-                Part of the `segments` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only present when the implementation declares the `segments` extension in `/capabilities`.
+                Part of the `segments` extension — see the [Extensions guide](https://ro-crate-api.crate-works.org/docs/extensions). Only present when the implementation declares the `segments` extension in `/capabilities`.
 
                 Locations inside the file where the full-text match occurred, allowing clients to deep-link the user to the match (e.g. a PDF page or an ELAN annotation's time range). Segments are optional — absent or empty for hits without structured content. They are ranked by relevance and capped at an implementation-defined limit.
     Deposit:

@@ -130,7 +130,7 @@ seconds.
   necessarily exhaustive.
 
 New segment types are proposed by pull request against the
-[specification repository](https://github.com/Language-Research-Technology/ro-crate-api) —
+[specification repository](https://github.com/crate-works/ro-crate-api) —
 see [the registry](./#the-curated-registry).
 
 ## Implementation Notes (Non-Normative)

@@ -87,5 +87,5 @@ the union grows.
 - The [API reference](/docs/api) documents `/capabilities` and the segment
   schemas.
 - The specification now has a
-  [changelog](https://github.com/Language-Research-Technology/ro-crate-api/blob/main/CHANGELOG.md)
+  [changelog](https://github.com/crate-works/ro-crate-api/blob/main/CHANGELOG.md)
   recording changes from 0.1.0 onwards.

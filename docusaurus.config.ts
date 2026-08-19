@@ -17,14 +17,14 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://language-research-technology.github.io',
+  url: 'https://ro-crate-api.crate-works.org',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/ro-crate-api/',
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'language-research-technology',
+  organizationName: 'crate-works',
   projectName: 'ro-crate-api',
 
   onBrokenLinks: 'throw',
@@ -47,7 +47,7 @@ const config: Config = {
           exclude: ['**/_*.{js,jsx,ts,tsx,md,mdx}', '**/_*/**', '**/*.test.{js,jsx,ts,tsx}', '**/__tests__/**', 'agents/**', 'adr/**'],
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/language-research-technology/ro-crate-api/tree/main',
+          editUrl: 'https://github.com/crate-works/ro-crate-api/tree/main',
           docItemComponent: '@theme/ApiItem',
         },
         blog: {
@@ -58,7 +58,7 @@ const config: Config = {
           },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/language-research-technology/ro-crate-api/tree/main',
+          editUrl: 'https://github.com/crate-works/ro-crate-api/tree/main',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -90,7 +90,7 @@ const config: Config = {
         { to: '/about', label: 'About', position: 'left' },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
-          href: 'https://github.com/language-research-technology/ro-crate-api',
+          href: 'https://github.com/crate-works/ro-crate-api',
           label: 'GitHub',
           position: 'right',
         },
@@ -116,6 +116,10 @@ const config: Config = {
           title: 'Community',
           items: [
             {
+              label: 'CrateWorks',
+              href: 'https://crate-works.org/',
+            },
+            {
               label: 'RO-Crate',
               href: 'https://www.researchobject.org/ro-crate/',
             },
@@ -138,12 +142,12 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/language-research-technology/ro-crate-api',
+              href: 'https://github.com/crate-works/ro-crate-api',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} PARADISEC and LDaCA. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} CrateWorks. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
@@ -182,7 +186,7 @@ const config: Config = {
               groupPathsBy: 'tag',
               categoryLinkSource: 'tag',
             },
-            downloadUrl: '/ro-crate-api/ro-crate-api.yaml',
+            downloadUrl: '/ro-crate-api.yaml',
             showSchemas: true,
             showExtensions: true,
           } satisfies OpenApiPlugin.Options,
