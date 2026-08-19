@@ -104,7 +104,7 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 Retrieve the raw RO-Crate JSON-LD metadata for any entity:
 
 ```bash
-curl https://data.ldaca.edu.au/api/entity/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FLRB%2F001/crate
+curl https://data.ldaca.edu.au/api/entity/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FLRB%2F001/rocrate
 ```
 
 This returns the complete RO-Crate metadata conforming to the RO-Crate specification.
