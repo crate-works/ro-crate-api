@@ -11,12 +11,12 @@ An update is a new deposit against an existing RO-Crate:
 POST /ro-crate/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FNT1%2F001/deposits
 ```
 
-(`404` if the object doesn't exist.) From here the session is [the same as a
+(`404` if the RO-Crate doesn't exist.) From here the session is [the same as a
 create deposit](./depositing) — same staging endpoints, same finalise, same
 state machine. What differs is how the staged content resolves against the
 version being replaced.
 
-## Crate-as-Manifest Carry-Forward
+## Metadata-as-Manifest Carry-Forward
 
 An update deposit starts logically empty. You stage a **new metadata document** plus
 **only the files that changed**. At finalise, the new metadata document is the
@@ -28,8 +28,8 @@ authoritative file manifest, and each file entity in it resolves in order:
 3. **Unresolved** — the reference stays dangling (see below).
 
 Files present in the baseline version but **absent from the new metadata document drop
-out** of the new version. There is no explicit file-delete call against a
-RO-Crate — the crate says what the new version holds.
+out** of the new version. There is no explicit file-delete call against an
+RO-Crate — the metadata document says what the new version holds.
 
 The common cases all fall out of this one rule:
 

@@ -5,7 +5,8 @@ mdx.format: md
 
 # Depositing
 
-A deposit is a session: open it, stage an RO-Crate and files, finalise. The
+A deposit is a session: open it, stage a metadata document and files,
+finalise. The
 RO-Crate comes into existence only at the first successful finalise —
 until then nothing is readable and no entities exist. This page walks the
 whole flow for a new RO-Crate; [updating an existing
@@ -59,11 +60,11 @@ at an ID you meant to [update](./updating).
 ```
 
 The response (`201`, with a `Location` header for the deposit) returns the
-RO-Crate ID immediately, so you can reference it from the crate you are
-about to stage. Whether the metadata document MUST reference it is implementation-defined
+RO-Crate ID immediately, so you can reference it from the metadata
+document you are about to stage. Whether the metadata document MUST reference it is implementation-defined
 and enforced at finalise.
 
-## 3. Stage the Crate
+## 3. Stage the Metadata Document
 
 ```http
 PUT /deposit/dep_8f14e45f/metadata
@@ -78,8 +79,9 @@ and files may be staged in **any order**; the metadata–file association is
 only checked at
 finalise.
 
-At finalise the staged crate becomes the RO-Crate's authoritative file
-manifest: every file the new version holds is a file entity in this metadata document.
+At finalise the staged metadata document becomes the RO-Crate's
+authoritative file manifest: every file the new version holds is a file
+entity in it.
 
 ## 4. Stage the Files
 
@@ -87,7 +89,8 @@ Files are staged at `PUT /deposit/{id}/file/{fileId}`, where `{fileId}` is
 the file entity's `@id` in the metadata document, percent-encoded — for attached files,
 its crate-relative path. Two modes share the endpoint, discriminated by the
 request `Content-Type`; use the ones the implementation declares in
-`fileUpload`. Only transport metadata travels here — descriptive metadata
+`fileUpload` — a mode it does not declare is rejected with `400`. Only
+transport metadata travels here — descriptive metadata
 about the file lives in the metadata document.
 
 ### Inline mode
@@ -195,7 +198,7 @@ no entities are touched. Retry is always safe.
   accepted.
 - **Non-validation failure** (materialisation crash, backend outage, or the
   target RO-Crate having been [deleted
-  mid-deposit](./lifecycle#open-deposits-when-the-object-is-deleted)) also
+  mid-deposit](./lifecycle#open-deposits-when-the-ro-crate-is-deleted)) also
   returns the deposit to `open` with the failure recorded; the synchronous
   path gets a `5xx`. There is no terminal `failed` state — retry, or abort
   to walk away.
@@ -225,8 +228,8 @@ GET /ro-crate/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FNT1%2F001
 ```
 
 `entityIds` is the authoritative "what did my deposit create". The deposited
-crate — [`GET /ro-crate/{id}/metadata`](/docs/api/get-ro-crate-metadata) —
-is the single source of truth for the object's content inventory; the
+metadata document — [`GET /ro-crate/{id}/metadata`](/docs/api/get-ro-crate-metadata)
+— is the single source of truth for the RO-Crate's content inventory; the
 RO-Crate carries no file list of its own.
 
 ## Abort and Expiry

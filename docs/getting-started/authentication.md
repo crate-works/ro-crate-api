@@ -80,7 +80,7 @@ curl https://api-provider.com/.well-known/openid-configuration
   "token_endpoint": "https://api-provider.com/oauth/token",
   "userinfo_endpoint": "https://api-provider.com/oauth/userinfo",
   "jwks_uri": "https://api-provider.com/.well-known/jwks",
-  "scopes_supported": ["openid", "read"],
+  "scopes_supported": ["openid", "read", "write"],
   "response_types_supported": ["code"]
 }
 ```
@@ -100,6 +100,19 @@ In addition to access tokens, you'll receive an ID token with user information:
 ### 4. OAuth2 Authorization Code Flow
 
 OAuth2 provides secure authentication for user-facing applications:
+
+#### Scopes
+
+Two coarse scopes are defined:
+
+- **`read`** — the read surface: entities, files, search, and
+  `/capabilities`.
+- **`write`** — the [deposit](/docs/deposit) and RO-Crate endpoints. Only
+  meaningful where the implementation declares `deposit.supported` as `true`.
+
+Finer-grained authorisation — which collections a user may read, who may
+deposit what — is implementation-defined and expressed through ordinary `403`
+responses. Request the least privilege your client needs.
 
 #### Step 1: Authorization Request
 

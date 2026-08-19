@@ -31,10 +31,10 @@ and the specification adheres to
   `@id`, and files absent from the new metadata document drop out. The baseline is pinned
   at deposit creation and each finalise replaces the RO-Crate
   wholesale, so the last finalise wins as a unit.
-- The RO-Crate read surface: `GET /ro-crates` (minimal list),
+- The RO-Crate read surface: `GET /ro-crates` (list),
   `GET /ro-crate/{id}` (lean body — `id`, `entityIds`, timestamps,
-  `access`) and `GET /ro-crate/{id}/metadata` (the deposited crate,
-  verbatim, with a HEAD twin). Bidirectional linkage between the catalog and
+  `access`) and `GET /ro-crate/{id}/metadata` (the deposited metadata
+  document, verbatim, with a HEAD twin). Bidirectional linkage between the catalog and
   RO-Crates: a plural `roCrateIds` on entities, a singular
   `roCrateId` on files, and `entityIds` on the RO-Crate.
 - Deletion: `DELETE /ro-crate/{id}` with no spec-mandated
@@ -42,14 +42,17 @@ and the specification adheres to
   constrained `DELETE /entity/{id}` valid only for entities no RO-Crate
   contributes to. Deleted URIs follow a single per-implementation
   tombstone policy — `410` with a new `Tombstone` schema, or plain `404` —
-  declared in `/capabilities` and covering entities alike.
+  covering RO-Crate, entity and file URIs alike.
+- A required top-level `tombstonePolicy` member in `/capabilities`, declaring
+  which of the two policies the implementation follows. Required of every
+  implementation, whether or not it provides the deposit surface: entities
+  and files are mandatory core, so any catalog may hold a URI that no longer
+  resolves. **Conformance-affecting**: existing implementations must add it.
 - A required top-level `deposit` block in `/capabilities`. Its `supported`
   flag states whether the implementation provides the deposit surface;
-  where it does, `idMinting`, `fileUpload` and `tombstonePolicy` accompany
-  it, plus optional `depositTtlSeconds` and `maxFileSizeBytes`. Deposit is
-  optional core rather than a registered extension: it is specified in the
-  core document, is not keyed in `capabilities.extensions`, and read-only
-  implementations remain conformant by declaring
+  where it does, `idMinting` and `fileUpload` accompany it, plus optional
+  `depositTtlSeconds` and `maxFileSizeBytes`. Deposit is
+  optional core: read-only implementations remain conformant by declaring
   `"deposit": { "supported": false }`. Write operations require the new
   coarse OAuth2 `write` scope.
 

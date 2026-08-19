@@ -13,9 +13,7 @@ flow through **deposit sessions** against **RO-Crates**, and catalog
 entities remain read-only projections that the implementation derives from
 what was deposited.
 
-Deposit is not an extension. It is not keyed in `capabilities.extensions`,
-and its fields carry no `x-extension` annotation; instead every
-implementation declares its position in a
+Every implementation declares its position in a
 [required `deposit` capability block](#declaring-the-capability).
 
 The deposit surface covers three things as one unit:
@@ -28,28 +26,19 @@ The deposit surface covers three things as one unit:
   [Entity](/docs/api/schemas/entity), `roCrateId` on
   [File](/docs/api/schemas/file))
 
-The read surface is not separable from the write pathway: readable RO-Crates
-without a deposit pathway is not a state this specification supports.
-
 ## Why RO-Crates, Not Entity Writes
 
-A single RO-Crate routinely describes many catalog entities — a collection,
-its items, every file they contain, and the people and organisations
-connected to them; the entity model is extensible, so the list doesn't end
-there. Entity-granular write endpoints would force depositors to decompose an
-RO-Crate they already hold into a sequence of per-entity calls, and force the
-API to referee partial failures across that sequence.
+The unit a depositor actually holds is the whole RO-Crate, so that is the
+unit of deposit:
 
-The unit a depositor actually holds is the whole RO-Crate. The specification
-makes that the unit of deposit:
-
-> An **RO-Crate** is the real thing on disk — a metadata document plus all
-> the files it references, deposited and stored as a unit.
+> An **RO-Crate** is a metadata document plus all the files it references,
+> deposited and stored as a unit.
 
 Depositors send RO-Crates; the implementation **materialises** catalog
 entities from them by its own rules. There are no entity write endpoints
 (with one narrow exception for
-[orphaned entities](./lifecycle#deleting-a-contributor-less-entity)).
+[orphaned entities](./lifecycle#deleting-a-contributor-less-entity)). The
+[announcement post](/blog/deposits) sets out the reasoning.
 
 ## Materialisation
 
@@ -59,10 +48,10 @@ materialised from it are readable, and the linkage fields below let clients
 traverse between the two surfaces. Two real archives illustrate how much the
 rules can differ:
 
-- **PARADISEC**: an RO-Crate is one item's crate and its media files.
-  Materialisation yields the item entity plus one file entity per media
-  file — a small, fixed shape.
-- **LDaCA**: an RO-Crate may be a whole corpus crate. Materialisation
+- **PARADISEC**: an RO-Crate is one item's metadata document and its media
+  files. Materialisation yields the item entity plus one file entity per
+  media file — a small, fixed shape.
+- **LDaCA**: an RO-Crate may describe a whole corpus. Materialisation
   explodes it into collection, item, file, person, and organisation
   entities — one deposit, many entities.
 
@@ -97,19 +86,20 @@ bidirectionally linked:
   arrive in exactly one deposit. Optional, to accommodate files predating any
   RO-Crate.
 
-Where deposit is supported, `GET /entity/{id}/rocrate` is specified as
-implementation-defined in provenance: the document may be a stored metadata document or a
-view derived from the crate(s) of the entity's contributing RO-Crates,
-but it MUST always be a valid RO-Crate whose root data entity describes the
-entity. To retrieve an original deposited metadata document verbatim, use
+`GET /entity/{id}/rocrate` has implementation-defined provenance: the
+document may be a stored metadata document, or a view derived from the
+metadata documents of the entity's contributing RO-Crates. Either way it
+MUST be a valid RO-Crate whose root data entity describes the entity. To
+retrieve an original deposited metadata document verbatim, use
 [`GET /ro-crate/{id}/metadata`](/docs/api/get-ro-crate-metadata).
 
 ## Declaring the Capability
 
-The `deposit` block in [`/capabilities`](/docs/getting-started/capabilities)
-is **required of every implementation** — read-only catalogs included. A
-client never has to infer read-only-ness from a missing key; each
-implementation says where it stands:
+The `deposit` block in
+[`/capabilities`](/docs/getting-started/capabilities#deposit) is **required
+of every implementation** — read-only catalogs included. A client never has
+to infer read-only-ness from a missing key; each implementation says where it
+stands:
 
 ```json
 {
@@ -118,7 +108,6 @@ implementation says where it stands:
     "supported": true,
     "idMinting": "both",
     "fileUpload": ["inline", "presigned"],
-    "tombstonePolicy": "410",
     "depositTtlSeconds": 604800,
     "maxFileSizeBytes": 5368709120
   }
@@ -134,28 +123,15 @@ A read-only catalog declares the block just as plainly:
 }
 ```
 
-- **`supported`** (required): whether the deposit and RO-Crate
-  endpoints are provided. This is the single flag clients check. When it is
-  `false`, the remaining fields are omitted.
-- **`idMinting`** (required): who mints RO-Crate IDs — `client`
-  (depositor proposes), `server` (implementation mints), or `both` (client
-  may propose, server fills gaps).
-- **`fileUpload`** (required): the staging modes supported, a set drawn from
-  `inline` (bytes in the staging request) and `presigned` (metadata in the
-  staging request, bytes uploaded directly to a returned target). Future
-  modes may be added; clients ignore values they do not recognise.
-- **`tombstonePolicy`** (required): `"410"` or `"404"` — what deleted
-  resource URIs return. One policy covers RO-Crates and the entity
-  knock-on alike; see [Deletion & Lifecycle](./lifecycle#tombstones).
-- **`depositTtlSeconds`** (optional): the expiry horizon for abandoned
-  deposits. Absent means expiry is implementation-defined — don't rely on a
-  particular window.
-- **`maxFileSizeBytes`** (optional): the largest file a deposit may stage.
-  Absent means no declared limit.
+`supported` is the single flag clients check; when it is `false` the
+remaining fields MUST be omitted. The
+[Capabilities guide](/docs/getting-started/capabilities#deposit) documents
+what each field governs.
 
-The three required detail fields are required only when `supported` is
-`true`; they carry no meaning for a read-only catalog and MUST be omitted
-there.
+Deletion behaviour is declared separately, in the top-level
+[`tombstonePolicy`](/docs/getting-started/capabilities#tombstonepolicy):
+it governs entity and file URIs as well as RO-Crate ones, so every
+implementation declares it, deposit or not.
 
 Deliberately *not* declared: whether finalise runs synchronously or
 asynchronously (server's discretion per request — one client code path
@@ -172,27 +148,19 @@ implementation-defined and expressed through ordinary `403` responses.
 ## RO-Crate Visibility
 
 Whether RO-Crates are readable beyond their depositor is
-**implementation-defined**. Implementations should choose one of two named
-patterns and apply it consistently:
+**implementation-defined**. Implementations should pick one of two patterns
+and apply it consistently:
 
-- **Public surface**: RO-Crates are listable and retrievable by
-  anyone; each carries an entity-style `access` object saying whether the
-  caller may fetch the metadata document. Recommended derivation: grant metadata access
-  only if the caller has metadata access to *every* entity materialised from
-  the object, since the deposited metadata document is the union of their metadata.
-  *Pros*: provenance is publicly traversable (any reader can follow
-  `roCrateIds` to the source of truth); citations to deposited crates
-  resolve for everyone. *Cons*: access derivation must be computed and kept
-  consistent with entity-level access; the surface must be hardened like any
-  public catalog surface.
-- **Depositor-only surface**: RO-Crate reads require the `write`
-  scope — a management surface for depositors and curators, not a catalog
-  surface. *Pros*: simple to reason about; no access derivation. *Cons*:
-  provenance links are dead ends for ordinary readers; the deposited metadata document
-  is not citable as a public artefact.
+- **Public surface**: RO-Crates are listable and retrievable by anyone, with
+  the `access` object governing metadata-document retrieval. Recommended
+  derivation: grant metadata access only if the caller has metadata access
+  to *every* entity materialised from the RO-Crate, since the deposited
+  metadata document is the union of their metadata.
+- **Depositor-only surface**: RO-Crate reads require the `write` scope — a
+  management surface for depositors and curators, not a catalog surface.
 
-Either way the RO-Crate resource carries the `access` object, so
-client code is identical under both patterns.
+The RO-Crate resource carries the `access` object either way, so client code
+is identical under both.
 
 ## The Endpoints
 
@@ -201,14 +169,14 @@ client code is identical under both patterns.
 | [`POST /deposits`](/docs/api/create-deposit) | Open a deposit for a new RO-Crate |
 | [`POST /ro-crate/{id}/deposits`](/docs/api/create-update-deposit) | Open an update deposit for an existing RO-Crate |
 | [`GET /deposit/{id}`](/docs/api/get-deposit) | Deposit state, staged files, recorded errors; the polling resource |
-| [`PUT /deposit/{id}/metadata`](/docs/api/stage-deposit-metadata) | Stage the RO-Crate (full replace) |
+| [`PUT /deposit/{id}/metadata`](/docs/api/stage-deposit-metadata) | Stage the metadata document (full replace) |
 | [`PUT /deposit/{id}/file/{fileId}`](/docs/api/stage-deposit-file) | Stage a file (inline or presigned) |
 | [`DELETE /deposit/{id}/file/{fileId}`](/docs/api/unstage-deposit-file) | Remove a staged file |
 | [`POST /deposit/{id}/finalise`](/docs/api/finalise-deposit) | Validate, publish, materialise |
 | [`DELETE /deposit/{id}`](/docs/api/abort-deposit) | Abort an open deposit |
 | [`GET /ro-crates`](/docs/api/list-ro-crates) | List RO-Crates |
 | [`GET /ro-crate/{id}`](/docs/api/get-ro-crate) | Retrieve an RO-Crate |
-| [`GET /ro-crate/{id}/metadata`](/docs/api/get-ro-crate-metadata) | The deposited crate, verbatim |
+| [`GET /ro-crate/{id}/metadata`](/docs/api/get-ro-crate-metadata) | The deposited metadata document, verbatim |
 | [`DELETE /ro-crate/{id}`](/docs/api/delete-ro-crate) | Delete an RO-Crate |
 | [`DELETE /entity/{id}`](/docs/api/delete-entity) | Delete a contributor-less entity |
 
@@ -226,6 +194,6 @@ The guides walk through the flows:
   not on an expectation of sync or async behaviour.
 - **Treat `entityIds` as live**: the materialised-entity list reflects the
   *current* materialisation and can change as other deposits land.
-- **Degrade gracefully**: the linkage fields are optional; absent means the
-  implementation (or that resource) doesn't carry them, not that the
-  resource is invalid.
+- **Degrade gracefully**: `roCrateIds` and `roCrateId` are optional; absent
+  means the implementation (or that resource) doesn't carry them, not that
+  the resource is invalid.
