@@ -4,3 +4,6 @@ allowBuilds:
   core-js: false
   lefthook: true # installs the git hooks
   postman-code-generators: false
+
+update:
+  githubActions: true
