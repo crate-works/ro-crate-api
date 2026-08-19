@@ -2,4 +2,5 @@ allowBuilds:
   "@parcel/watcher": false
   "@swc/core": false
   core-js: false
+  lefthook: true # installs the git hooks
   postman-code-generators: false

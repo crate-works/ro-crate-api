@@ -1,0 +1,16 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: types
+      run: pnpm run lint:types
+
+    - name: format
+      run: pnpm run lint:format
+
+    - name: openapi
+      run: pnpm run lint:openapi
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
