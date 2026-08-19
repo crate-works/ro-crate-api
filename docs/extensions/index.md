@@ -11,12 +11,30 @@ extension model, the curated registry, feature detection through
 must follow. Each registered extension has its own page describing it in
 detail.
 
+## Conformance Tiers
+
+The specification has three tiers, and it is worth being precise about which
+is which:
+
+- **Mandatory core** — the read surface: entities and their metadata
+  documents, files, search, and `/capabilities` itself. Every conformant implementation provides all of it.
+- **Optional core** — specified in the core document, but an implementation
+  may decline to provide it and remain conformant. A surface belongs here
+  rather than in an extension only when both hold: it changes the semantics
+  of mandatory core endpoints rather than merely adding fields to them, and
+  declining it is a legitimate deployment posture rather than a missing
+  feature. Each member declares itself through a **required** block in
+  `/capabilities` carrying a `supported` flag, so the answer is always
+  explicit. [deposit](/docs/deposit) is currently the only member: it is the
+  write modality, and it re-specifies `GET /entity/{id}/rocrate` and extends
+  the tombstone policy to entity URIs. New optional functionality that only
+  *adds* to responses belongs in an extension.
+- **Extensions** — everything below.
+
 ## The Extension Model
 
-The core specification defines the endpoints and fields every implementation
-must provide. Beyond that core, functionality is added through **extensions**:
-optional, well-defined units of behaviour that implementations choose to
-provide.
+Beyond core, functionality is added through **extensions**: optional,
+well-defined units of behaviour that implementations choose to provide.
 
 Every extension has:
 
@@ -50,7 +68,6 @@ consumers a single authoritative definition.
 | Identifier | Adds | Capability details |
 | --- | --- | --- |
 | [`segments`](./segments) | `searchExtra.segments` — structured drill-down locations (PDF pages, time-aligned annotations) for full-text search matches inside files | none |
-| [`deposit`](./deposit/) | Write access through deposit sessions against storage objects — the deposit and storage-object endpoints, plus `storageObjectIds` on Entity and `storageObjectId` on File | `idMinting`, `fileUpload`, `tombstonePolicy`, optional `depositTtlSeconds` and `maxFileSizeBytes` |
 
 ### Legacy Extensions
 
@@ -73,6 +90,10 @@ member of [`/capabilities`](/docs/getting-started/capabilities), a map of
 extension identifier to a details object. Detection is a simple key
 lookup: an archive supports segments exactly when
 `"segments" in capabilities.extensions`.
+
+Optional core is detected differently, and deliberately so: `deposit` is a
+required top-level member of `/capabilities`, so the check is
+`capabilities.deposit.supported` rather than a key lookup.
 
 ## Client Rules
 

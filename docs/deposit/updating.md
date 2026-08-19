@@ -1,14 +1,14 @@
 ---
-title: Updating a Storage Object
+title: Updating an RO-Crate
 mdx.format: md
 ---
 
-# Updating a Storage Object
+# Updating an RO-Crate
 
-An update is a new deposit against an existing storage object:
+An update is a new deposit against an existing RO-Crate:
 
 ```http
-POST /storage-object/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FNT1%2F001/deposits
+POST /ro-crate/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FNT1%2F001/deposits
 ```
 
 (`404` if the object doesn't exist.) From here the session is [the same as a
@@ -18,8 +18,8 @@ version being replaced.
 
 ## Crate-as-Manifest Carry-Forward
 
-An update deposit starts logically empty. You stage a **new crate** plus
-**only the files that changed**. At finalise, the new crate is the
+An update deposit starts logically empty. You stage a **new metadata document** plus
+**only the files that changed**. At finalise, the new metadata document is the
 authoritative file manifest, and each file entity in it resolves in order:
 
 1. **Staged in this deposit** — the new bytes win.
@@ -27,27 +27,27 @@ authoritative file manifest, and each file entity in it resolves in order:
    kept, without re-upload.
 3. **Unresolved** — the reference stays dangling (see below).
 
-Files present in the baseline version but **absent from the new crate drop
+Files present in the baseline version but **absent from the new metadata document drop
 out** of the new version. There is no explicit file-delete call against a
-storage object — the crate says what the new version holds.
+RO-Crate — the crate says what the new version holds.
 
 The common cases all fall out of this one rule:
 
-- **Fix a metadata typo**: stage the corrected crate, finalise. No files
+- **Fix a metadata typo**: stage the corrected metadata document, finalise. No files
   staged; everything carries forward. (There is no separate
-  replace-crate-only fast path — this *is* it.)
-- **Replace one recording**: stage the corrected crate (if the metadata
+  replace-metadata-only fast path — this *is* it.)
+- **Replace one recording**: stage the corrected metadata document (if the metadata
   changed) or none at all, stage the new bytes at the file's `@id`,
   finalise. Every other file carries forward.
-- **Remove a file**: stage a crate that no longer references it, finalise.
-- **Add a file**: stage a crate that references it, stage its bytes,
+- **Remove a file**: stage a metadata document that no longer references it, finalise.
+- **Add a file**: stage a metadata document that references it, stage its bytes,
   finalise.
 
 ## Unresolved References
 
 An unresolved reference is **not a protocol error** — the file simply
 `404`s when followed. This is the same non-policing integrity stance as the
-rest of the specification: a crate may legitimately reference material the
+rest of the specification: an RO-Crate may legitimately reference material the
 archive does not hold. Strict archives MAY reject unresolved references at
 finalise via implementation-defined validation (the uniform `422`
 violations shape).
@@ -59,12 +59,12 @@ so every file entity without staged bytes is simply unresolved.
 
 - **The baseline is pinned when the deposit is opened.** Carry-forward
   resolves against the version that was current at `POST
-  /storage-object/{id}/deposits` time, recorded as the deposit's
+  /ro-crate/{id}/deposits` time, recorded as the deposit's
   `createdAt`.
-- **Finalise replaces the storage object wholesale.** The last finalise
+- **Finalise replaces the RO-Crate wholesale.** The last finalise
   wins *as a unit*: a published version is always exactly what one
   depositor described — never a mix of two sessions.
-- Concurrent open deposits against one storage object are allowed.
+- Concurrent open deposits against one RO-Crate are allowed.
   Implementations MAY reject a finalise whose baseline has been superseded
   with `409`; clients should be prepared to re-open a deposit against the
   new current version.

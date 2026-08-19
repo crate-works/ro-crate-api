@@ -11,50 +11,55 @@ and the specification adheres to
 
 ### Added
 
-- The registered `deposit` extension: write access through deposit sessions
-  against storage objects — an RO-Crate plus all the files it references,
+- Deposit: write access through deposit sessions
+  against RO-Crates — a metadata document plus all the files it references,
   deposited and stored as a unit, from which the implementation materialises
-  catalog entities by its own rules. The storage object is the sole write
+  catalog entities by its own rules. The RO-Crate is the sole write
   pathway; entities remain read-only projections.
 - Deposit session endpoints: `POST /deposits` creates a deposit for a new
-  storage object (client-proposed or server-minted ID per the `idMinting`
-  capability) and `POST /storage-object/{id}/deposits` opens an update
-  deposit; staging via `PUT /deposit/{id}/crate` (full replace) and
+  RO-Crate (client-proposed or server-minted ID per the `idMinting`
+  capability) and `POST /ro-crate/{id}/deposits` opens an update
+  deposit; staging via `PUT /deposit/{id}/metadata` (full replace) and
   `PUT /deposit/{id}/file/{fileId}` (inline bytes or presigned upload,
   discriminated by Content-Type), in any order; `POST /deposit/{id}/finalise`
   validates and publishes atomically, synchronously (200) or asynchronously
   (202 with polling via `GET /deposit/{id}`); `DELETE /deposit/{id}` aborts.
   A failed finalise returns the deposit to `open` with the violations
   recorded — staged content is never lost to a metadata typo.
-- Update deposits use crate-as-manifest carry-forward: stage a new crate plus
+- Update deposits use metadata-as-manifest carry-forward: stage a new metadata document plus
   only the changed files; unchanged files carry forward from the baseline by
-  `@id`, and files absent from the new crate drop out. The baseline is pinned
-  at deposit creation and each finalise replaces the storage object
+  `@id`, and files absent from the new metadata document drop out. The baseline is pinned
+  at deposit creation and each finalise replaces the RO-Crate
   wholesale, so the last finalise wins as a unit.
-- The storage-object read surface: `GET /storage-objects` (minimal list),
-  `GET /storage-object/{id}` (lean body — `id`, `entityIds`, timestamps,
-  `access`) and `GET /storage-object/{id}/crate` (the deposited crate,
+- The RO-Crate read surface: `GET /ro-crates` (minimal list),
+  `GET /ro-crate/{id}` (lean body — `id`, `entityIds`, timestamps,
+  `access`) and `GET /ro-crate/{id}/metadata` (the deposited crate,
   verbatim, with a HEAD twin). Bidirectional linkage between the catalog and
-  storage objects: a plural `storageObjectIds` on entities, a singular
-  `storageObjectId` on files, and `entityIds` on the storage object.
-- Deletion: `DELETE /storage-object/{id}` with no spec-mandated
+  RO-Crates: a plural `roCrateIds` on entities, a singular
+  `roCrateId` on files, and `entityIds` on the RO-Crate.
+- Deletion: `DELETE /ro-crate/{id}` with no spec-mandated
   preconditions (implementations MAY refuse with a 409 and a reason), and a
-  constrained `DELETE /entity/{id}` valid only for entities no storage
-  object contributes to. Deleted URIs follow a single per-implementation
+  constrained `DELETE /entity/{id}` valid only for entities no RO-Crate
+  contributes to. Deleted URIs follow a single per-implementation
   tombstone policy — `410` with a new `Tombstone` schema, or plain `404` —
   declared in `/capabilities` and covering entities alike.
-- A `DepositCapability` block in `/capabilities` declaring `idMinting`,
-  `fileUpload` and `tombstonePolicy` (required), plus optional
-  `depositTtlSeconds` and `maxFileSizeBytes`. Write operations require the
-  new coarse OAuth2 `write` scope.
+- A required top-level `deposit` block in `/capabilities`. Its `supported`
+  flag states whether the implementation provides the deposit surface;
+  where it does, `idMinting`, `fileUpload` and `tombstonePolicy` accompany
+  it, plus optional `depositTtlSeconds` and `maxFileSizeBytes`. Deposit is
+  optional core rather than a registered extension: it is specified in the
+  core document, is not keyed in `capabilities.extensions`, and read-only
+  implementations remain conformant by declaring
+  `"deposit": { "supported": false }`. Write operations require the new
+  coarse OAuth2 `write` scope.
 
 ### Changed
 
 - `GET /entity/{id}/rocrate` is now specified as implementation-defined in
   provenance: the document may be stored or derived from the entity's
-  contributing storage objects, but must always be a valid RO-Crate whose
-  root data entity describes the entity. An original deposited crate is
-  retrieved verbatim from `GET /storage-object/{id}/crate`.
+  contributing RO-Crates, but must always be a valid RO-Crate whose
+  root data entity describes the entity. An original deposited metadata document is
+  retrieved verbatim from `GET /ro-crate/{id}/metadata`.
 
 ## [0.2.0] - 2026-07-20
 
