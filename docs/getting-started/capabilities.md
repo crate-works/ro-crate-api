@@ -45,7 +45,7 @@ The full schema is documented in the
 
 The version of this specification the implementation targets. Use it to reason
 about core-level differences between archives as the specification evolves —
-the [changelog](https://github.com/Language-Research-Technology/ro-crate-api/blob/main/CHANGELOG.md)
+the [changelog](https://github.com/crate-works/ro-crate-api/blob/main/CHANGELOG.md)
 records what changed in each version.
 
 ### `deposit`

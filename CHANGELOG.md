@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the specification adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The specification moved to the CrateWorks organisation. It is now published at
+  <https://ro-crate-api.crate-works.org> from
+  <https://github.com/crate-works/ro-crate-api>; the documentation links carried
+  in `openapi.yaml` were repointed to match. The previous
+  `language-research-technology.github.io/ro-crate-api` address is no longer
+  served and does not redirect.
+
 ## [0.3.0] - 2026-07-21
 
 ### Added

@@ -106,6 +106,10 @@ Asia-Pacific region. Their API implementation supports:
 
 ## Community and Governance
 
+The specification is maintained by
+[CrateWorks](https://crate-works.org), a workbench of open-source tools for
+RO-Crate research data.
+
 The RO-Crate API is developed as an open specification with input from:
 
 - **Research institutions** implementing and using the API
@@ -161,7 +165,7 @@ Ready to join the RO-Crate API community?
 - **Implement the spec**: Use our [OpenAPI specification](/docs/api)
 - **Join discussions**: Participate in the RO-Crate community
 - **Contribute**: Submit issues and improvements on
-  [GitHub](https://github.com/Language-Research-Technology/ro-crate-api)
+  [GitHub](https://github.com/crate-works/ro-crate-api)
 
 Together, we're building the foundation for the next generation of research data
 infrastructure.

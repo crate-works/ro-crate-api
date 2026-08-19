@@ -54,7 +54,7 @@ examples and implementation notes.
 
 To propose a new extension (or a new variant within an existing one, such as a
 new segment type), open a pull request against
-[this specification repository](https://github.com/Language-Research-Technology/ro-crate-api).
+[this specification repository](https://github.com/crate-works/ro-crate-api).
 Registration keeps identifiers stable and collision-free, and gives all
 consumers a single authoritative definition.
 
