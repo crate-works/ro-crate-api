@@ -66,7 +66,7 @@ consumers a single authoritative definition.
 
 ### Legacy Extensions
 
-A handful of properties used by the [oni-ui](https://github.com/Language-Research-Technology/oni-ui)
+A handful of properties used by the [Oni](https://github.com/crate-works/oni)
 implementation predate the registry. They are documented on the
 [Legacy Extensions](./legacy) page until they are formally registered.
 
