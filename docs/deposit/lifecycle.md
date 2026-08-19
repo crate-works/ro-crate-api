@@ -18,8 +18,8 @@ DELETE /ro-crate/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FNT1%2F001
 ```
 
 Deletion is not a deposit session — there is nothing to stage and the
-operation is already atomic. It removes the RO-Crate's crate and
-files. Implementations needing slow teardown MAY return `202 Accepted`.
+operation is already atomic. It removes the RO-Crate's metadata document
+and files. Implementations needing slow teardown MAY return `202 Accepted`.
 
 The specification mandates **no preconditions**. An implementation MAY
 refuse a delete with `409` and a reason body per its own policy — curatorial
@@ -27,7 +27,7 @@ holds, cross-references, retention rules — but none is required.
 
 ## The Entity Knock-On
 
-What deletion does to the entities materialised from the object is
+What deletion does to the entities materialised from the RO-Crate is
 **implementation-defined**, with the same latitude as re-deposit pruning:
 
 - An entity whose `roCrateIds` still lists another contributor
@@ -44,8 +44,7 @@ adopt the same tombstone policy as everything else.
 
 ### Previewing a Delete
 
-There is no dry-run endpoint in this revision (a delete-preview is a named
-future extension). Clients can approximate one:
+There is no dry-run endpoint. Clients can approximate one:
 
 1. `GET /ro-crate/{id}` and read `entityIds`.
 2. For each listed entity, `GET /entity/{id}` and inspect
@@ -58,10 +57,10 @@ is implementation-defined, so a candidate may still be retained.
 
 ## Tombstones
 
-Each implementation adopts **one** tombstone policy, declared as
-`tombstonePolicy` in its [deposit capability](./#declaring-the-capability),
-covering deleted RO-Crate URIs (including `/crate`) and the entity
-knock-on alike — no mixing:
+Each implementation adopts **one** tombstone policy, declared as the
+top-level [`tombstonePolicy`](/docs/getting-started/capabilities#tombstonepolicy)
+in `/capabilities`, covering deleted RO-Crate URIs (including
+`/ro-crate/{id}/metadata`) and the entity knock-on alike — no mixing:
 
 - **`"410"`**: deleted URIs return `410 Gone` with a
   [Tombstone](/docs/api/schemas/tombstone) body:
@@ -85,15 +84,15 @@ knock-on alike — no mixing:
 
 A deleted RO-Crate ID MAY be recreated (`POST /deposits` with the
 previously used ID); implementations MAY refuse with `409`. Recreation is a
-**new object, not a continuation** — no version lineage and no relationship
-to the deleted object's entities is implied.
+**new RO-Crate, not a continuation** — no version lineage and no
+relationship to the deleted RO-Crate's entities is implied.
 
 The policies pair naturally, though neither pairing is mandated: `410`
 tombstones suit archives that reserve IDs forever (trustworthy citations);
 `404` hard-delete suits clean reuse, including the delete-and-recreate flow
-for changing an object's ID.
+for changing an RO-Crate's ID.
 
-## Open Deposits When the Object Is Deleted
+## Open Deposits When the RO-Crate Is Deleted
 
 **Delete wins.** An open deposit targeting a deleted RO-Crate can no
 longer finalise: the finalise fails, the failure is recorded in the
@@ -106,8 +105,8 @@ via the implementation-defined `409` above.
 
 There is no entity UPDATE. To enrich an entity beyond what its original
 deposit said — without touching that deposit — deposit a small **curation
-RO-Crate** whose crate mentions the entity's `@id` and carries the
-extra metadata. The ordinary
+RO-Crate** whose metadata document mentions the entity's `@id` and carries
+the extra metadata. The ordinary
 [many-to-one merge](./#materialisation) combines the contributions.
 
 For example, to flesh out an Organisation entity that a collection deposit
@@ -123,7 +122,7 @@ mentioned only by name, deposit a one-entity RO-Crate:
 ```
 
 The merged entity now lists both RO-Crates in `roCrateIds` —
-the enrichment survives re-deposit of the original object, carries its own
+the enrichment survives re-deposit of the original RO-Crate, carries its own
 provenance, and flows through the normal session pathway with nothing new
 to learn.
 
@@ -134,6 +133,6 @@ The one entity-level write:
 entity's `roCrateIds` is empty, and returns `409` otherwise. It
 exists because no session-based operation can reach an entity that no
 RO-Crate contributes to — such as a retained Organisation whose last
-contributor was deleted. Crate-backed data can never be touched this way:
+contributor was deleted. Deposited data can never be touched this way:
 while any RO-Crate contributes, the delete is refused and changes go
 through [deposit sessions](./updating) instead.

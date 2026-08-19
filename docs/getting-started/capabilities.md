@@ -18,9 +18,9 @@ it instead of relying on per-archive configuration or probing responses.
   "deposit": {
     "supported": true,
     "idMinting": "both",
-    "fileUpload": ["inline", "presigned"],
-    "tombstonePolicy": "410"
+    "fileUpload": ["inline", "presigned"]
   },
+  "tombstonePolicy": "410",
   "extensions": {
     "segments": {}
   },
@@ -51,10 +51,10 @@ records what changed in each version.
 ### `deposit`
 
 Whether the implementation provides the optional
-[deposit surface](/docs/deposit), and on what terms. Unlike the extensions
-below, this member is **required**: every implementation declares its position
-explicitly, so a read-only catalog is never mistaken for one whose capability
-document happens to be incomplete.
+[deposit surface](/docs/deposit), and on what terms. This member is
+**required**: every implementation declares its position explicitly, so a
+read-only catalog is never mistaken for one whose capability document happens
+to be incomplete.
 
 `supported` is the flag clients check. A read-only catalog declares:
 
@@ -62,10 +62,36 @@ document happens to be incomplete.
 { "deposit": { "supported": false } }
 ```
 
-When `supported` is `true`, `idMinting`, `fileUpload` and `tombstonePolicy`
-accompany it, along with the optional `depositTtlSeconds` and
-`maxFileSizeBytes`. See the [Deposits guide](/docs/deposit#declaring-the-capability)
-for what each field governs.
+- **`supported`** (required): whether the deposit and RO-Crate endpoints are
+  provided. When it is `false`, the remaining fields MUST be omitted.
+- **`idMinting`** (required when supported): who mints RO-Crate IDs —
+  `client` (the depositor proposes), `server` (the implementation mints), or
+  `both` (the client may propose, the server fills gaps).
+- **`fileUpload`** (required when supported): the file staging modes
+  supported, drawn from `inline` (bytes in the staging request) and
+  `presigned` (metadata in the staging request, bytes uploaded directly to a
+  returned target). Future modes may be added; ignore values you do not
+  recognise.
+- **`depositTtlSeconds`** (optional): the expiry horizon for abandoned
+  deposits. Absent means expiry is implementation-defined — don't rely on a
+  particular window.
+- **`maxFileSizeBytes`** (optional): the largest file a deposit may stage.
+  Absent means no declared limit.
+
+The [Deposits guide](/docs/deposit) covers how these play out in practice.
+
+### `tombstonePolicy`
+
+What deleted resource URIs return — `"410"` (a `410 Gone` carrying a
+[Tombstone](/docs/api/schemas/tombstone) body) or `"404"` (indistinguishable
+from a URI that never existed). One policy covers RO-Crate, entity and file
+URIs alike; implementations do not mix them.
+
+This member is **required** of every implementation, deposit surface or not:
+entities and files are mandatory core, so any catalog can have a URI that
+used to resolve, and a client following a stale link needs to know which
+answer to expect. See
+[Deletion & Lifecycle](/docs/deposit/lifecycle#tombstones).
 
 ### `extensions`
 

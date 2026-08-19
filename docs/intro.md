@@ -59,6 +59,13 @@ engines.
 - File access and download
 - Conformance to LDAC profiles
 
+### 📥 **Deposit**
+
+- Write access through deposit sessions against RO-Crates
+- Inline or presigned file upload
+- Atomic publish, with catalog entities materialised from what was deposited
+- Optional — read-only catalogs remain fully conformant
+
 ### 🚀 **Developer Friendly**
 
 - RESTful design following best practices
@@ -149,12 +156,6 @@ Looking for specific workflows and use cases?
 
 Need detailed endpoint documentation?
 → [API Reference](./api/)
-
-## Future Development
-
-The RO-Crate API specification is actively developed with planned enhancements:
-
-- Write operations (create, update, delete)
 
 ## Community and Contribution
 

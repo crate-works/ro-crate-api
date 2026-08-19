@@ -30,7 +30,7 @@ info:
 
     Deposit is part of the core specification but is optional to provide: a read-only catalog remains conformant without it. All writes flow through deposit sessions against **RO-Crates** — a metadata document plus all the files it references, deposited and stored as a unit. The implementation materialises catalog entities from RO-Crates by its own rules; entities are read-only projections and have no write endpoints of their own.
 
-    Every implementation declares where it stands: the `deposit` block in `GET /capabilities` is always present, and its required `supported` flag states plainly whether the deposit surface is available. This is not an extension — it is not keyed in `capabilities.extensions` and its fields carry no `x-extension` annotation.
+    Every implementation declares where it stands: the `deposit` block in `GET /capabilities` is always present, and its required `supported` flag states plainly whether the deposit surface is available.
 
   contact:
     name: Issues
@@ -249,7 +249,7 @@ paths:
         - entities
       summary: Delete a contributor-less entity
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Delete an entity that no RO-Crate contributes to — its `roCrateIds` is empty. Such entities (for example an Organisation whose last contributing RO-Crate was deleted but which the implementation chose to retain) cannot be reached by any deposit-session operation, so this is the one entity-level write.
 
@@ -322,7 +322,7 @@ paths:
 
         This endpoint works for any entity type (Collection, Object, or MediaObject) and returns the associated ro-crate-metadata.json content.
 
-        The returned document's provenance is implementation-defined: it may be a stored metadata document, or a view derived from the metadata documents of the entity's contributing RO-Crates. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve an original deposited crate verbatim, use `GET /ro-crate/{id}/metadata` (available where the implementation supports deposit).
+        The returned document's provenance is implementation-defined: it may be a stored metadata document, or a view derived from the metadata documents of the entity's contributing RO-Crates. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve the original deposited metadata document verbatim, use `GET /ro-crate/{id}/metadata` (available where the implementation supports deposit).
       operationId: getEntityCrate
       parameters:
         - name: id
@@ -985,13 +985,13 @@ paths:
         - deposits
       summary: Create a deposit for a new RO-Crate
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Open a deposit session that will create a new RO-Crate. The RO-Crate comes into existence only at the deposit's first successful finalise — until then nothing is readable and no entities exist.
 
         The request body MAY propose a `roCrateId` where the implementation's `idMinting` capability is `client` or `both`; when the body or the field is absent the server mints one (`server` or `both`). Proposing an ID that is not supported by the declared `idMinting` mode is rejected with `422`; proposing an ID that already exists is rejected with `409`. The RO-Crate ID is returned immediately so the client can reference it from the deposited metadata document; whether the metadata document MUST reference it is implementation-defined and enforced at finalise.
 
-        A previously deleted RO-Crate ID MAY be reused; implementations MAY refuse with `409`. Recreation is a new RO-Crate, not a continuation — no relationship to the deleted object's history or entities is implied.
+        A previously deleted RO-Crate ID MAY be reused; implementations MAY refuse with `409`. Recreation is a new RO-Crate, not a continuation — no relationship to the deleted RO-Crate's history or entities is implied.
 
         To update an existing RO-Crate, use `POST /ro-crate/{id}/deposits` instead.
       operationId: createDeposit
@@ -1069,7 +1069,7 @@ paths:
         - deposits
       summary: Get a deposit
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Retrieve the deposit, including its lifecycle state, the files staged so far with per-file upload status, and the violations recorded by the most recent failed finalise. This is the polling resource for asynchronous finalisation: after a `202` from finalise, poll here until the state leaves `finalising`.
       operationId: getDeposit
@@ -1113,9 +1113,9 @@ paths:
         - deposits
       summary: Abort a deposit
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
-        Abort an `open` deposit, discarding its staged crate and files. Aborting is terminal; the RO-Crate is left at its prior version (or never comes into existence for a create deposit).
+        Abort an `open` deposit, discarding its staged metadata document and files. Aborting is terminal; the RO-Crate is left at its prior version (or never comes into existence for a create deposit).
 
         Deposits are also subject to implementation-defined expiry — an expired deposit behaves as aborted, and subsequent access MAY return `404`. Where the implementation declares `depositTtlSeconds` in `/capabilities`, that is the expiry horizon.
       operationId: abortDeposit
@@ -1163,11 +1163,11 @@ paths:
         - deposits
       summary: Stage the metadata document
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Stage the RO-Crate metadata document for this deposit. This is a full replace — staging a new metadata document discards the previously staged one; there is no metadata PATCH and no metadata DELETE. The metadata document and files may be staged in any order; metadata–file association is checked at finalise.
 
-        At finalise the staged crate becomes the RO-Crate's authoritative file manifest: each file entity in the metadata document resolves to bytes staged in this deposit, else (for update deposits) to the file carried forward by `@id` from the baseline version, else remains an unresolved reference. Unresolved references are not protocol errors — they simply `404` when followed — but implementations MAY reject them at finalise via validation. Files present in the baseline but absent from the new crate drop out of the new version.
+        At finalise the staged metadata document becomes the RO-Crate's authoritative file manifest: each file entity in the metadata document resolves to bytes staged in this deposit, else (for update deposits) to the file carried forward by `@id` from the baseline version, else remains an unresolved reference. Unresolved references are not protocol errors — they simply `404` when followed — but implementations MAY reject them at finalise via validation. Files present in the baseline but absent from the new metadata document drop out of the new version.
       operationId: stageDepositMetadata
       security:
         - ApiKey: []
@@ -1186,7 +1186,7 @@ paths:
               description: RO-Crate metadata conforming to the RO-Crate specification
       responses:
         "204":
-          description: Crate staged
+          description: Metadata document staged
         "400":
           description: Bad Request - the body is not a JSON-LD document
           content:
@@ -1229,7 +1229,7 @@ paths:
         - deposits
       summary: Stage a file
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Stage a file in this deposit. `{fileId}` is the file entity's `@id` in the deposited metadata document, percent-encoded — for attached files, its crate-relative path. The metadata document and files may be staged in any order.
 
@@ -1321,9 +1321,9 @@ paths:
         - deposits
       summary: Remove a staged file
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
-        Remove a file staged in this deposit. Valid while the deposit is `open`. This only affects the deposit's staging area — to drop a file from an existing RO-Crate, stage a crate that no longer references it.
+        Remove a file staged in this deposit. Valid while the deposit is `open`. This only affects the deposit's staging area — to drop a file from an existing RO-Crate, stage a metadata document that no longer references it.
       operationId: unstageDepositFile
       security:
         - ApiKey: []
@@ -1377,7 +1377,7 @@ paths:
         - deposits
       summary: Finalise a deposit
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Finalise the deposit: validate the staged content, publish it as the RO-Crate's new current version (replacing the prior version wholesale), and materialise catalog entities from it. Validation depth and materialisation rules are implementation-defined.
 
@@ -1458,7 +1458,7 @@ paths:
         - ro_crates
       summary: List RO-Crates
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         List RO-Crates, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether RO-Crates are a public surface (listable by anyone, with per-object `access` governing metadata-document retrieval) or a depositor-only management surface (requiring the `write` scope).
 
@@ -1516,9 +1516,9 @@ paths:
         - ro_crates
       summary: Get an RO-Crate
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
-        Retrieve an RO-Crate. The body is deliberately lean: identity, the entities materialised from the current version, timestamps, and access. The deposited metadata document — `GET /ro-crate/{id}/metadata` — is the single source of truth for the object's content inventory; the RO-Crate carries no file list of its own.
+        Retrieve an RO-Crate. The body is deliberately lean: identity, the entities materialised from the current version, timestamps, and access. The deposited metadata document — `GET /ro-crate/{id}/metadata` — is the single source of truth for the RO-Crate's content inventory; the RO-Crate carries no file list of its own.
 
         `entityIds` is the authoritative answer to "what did my deposit create". It is the inverse of the entity's `roCrateIds` and can change when later deposits (of this or other RO-Crates) alter the materialisation.
       operationId: getRoCrate
@@ -1558,15 +1558,15 @@ paths:
         - ro_crates
       summary: Delete an RO-Crate
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
-        Delete an RO-Crate — its crate and files. Deletion is not a deposit session; it is already atomic. Implementations needing slow teardown MAY return `202 Accepted`.
+        Delete an RO-Crate — its metadata document and files. Deletion is not a deposit session; it is already atomic. Implementations needing slow teardown MAY return `202 Accepted`.
 
-        The spec mandates no preconditions; implementations MAY refuse per their own policy (curatorial holds, cross-references) with `409` and a reason. The effect on materialised entities is implementation-defined, mirroring re-deposit pruning: an entity no other RO-Crate contributes to MAY be removed, and deliberate retention is legitimate. An entity with other contributors survives — the deleted object simply drops out of its `roCrateIds`.
+        The spec mandates no preconditions; implementations MAY refuse per their own policy (curatorial holds, cross-references) with `409` and a reason. The effect on materialised entities is implementation-defined, mirroring re-deposit pruning: an entity no other RO-Crate contributes to MAY be removed, and deliberate retention is legitimate. An entity with other contributors survives — the deleted RO-Crate simply drops out of its `roCrateIds`.
 
-        Open deposits do not block deletion: delete wins, and a subsequent finalise of such a deposit fails back to `open` with the failure recorded. Implementations MAY auto-abort open deposits against the deleted object.
+        Open deposits do not block deletion: delete wins, and a subsequent finalise of such a deposit fails back to `open` with the failure recorded. Implementations MAY auto-abort open deposits against the deleted RO-Crate.
 
-        After deletion, the RO-Crate's URIs (including `/crate`) follow the implementation's declared `tombstonePolicy`.
+        After deletion, the RO-Crate's URIs (including `/ro-crate/{id}/metadata`) follow the implementation's declared `tombstonePolicy`.
       operationId: deleteRoCrate
       security:
         - ApiKey: []
@@ -1616,9 +1616,9 @@ paths:
         - ro_crates
       summary: Get the deposited metadata document
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
-        Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns an original deposited crate.
+        Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns the original deposited metadata document.
       operationId: getRoCrateMetadata
       parameters:
         - $ref: "#/components/parameters/RoCrateIdParameter"
@@ -1640,7 +1640,7 @@ paths:
               schema:
                 type: string
                 format: date-time
-              description: The date and time the crate was last modified
+              description: The date and time the metadata document was last modified
             ETag:
               schema:
                 type: string
@@ -1674,7 +1674,7 @@ paths:
         - ro_crates
       summary: Get deposited metadata document headers
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Retrieve the deposited metadata document's headers without downloading the content. Returns the same headers as GET but with no response body, useful for checking availability and caching information.
       operationId: headRoCrateMetadata
@@ -1688,17 +1688,17 @@ paths:
               required: true
               schema:
                 type: integer
-              description: The size of the crate content in bytes
+              description: The size of the metadata document in bytes
             Content-Type:
               required: true
               schema:
                 type: string
-              description: The MIME type of the crate content
+              description: The MIME type of the metadata document
             Last-Modified:
               schema:
                 type: string
                 format: date-time
-              description: The date and time the crate was last modified
+              description: The date and time the metadata document was last modified
             ETag:
               schema:
                 type: string
@@ -1729,7 +1729,7 @@ paths:
         - deposits
       summary: Create a deposit to update an RO-Crate
       description: |
-        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+        Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit).
 
         Open a deposit session against an existing RO-Crate. The deposit starts logically empty; the client stages a new metadata document plus only the files that changed. At finalise the new metadata document is the authoritative file manifest — unchanged files are carried forward from the baseline by `@id`, and files absent from the new metadata document drop out. A metadata-only fix is therefore just `PUT /deposit/{id}/metadata` followed by finalise.
 
@@ -1919,7 +1919,7 @@ components:
             default:
               $ref: "#/components/examples/InternalServerErrorResponse"
     GoneResponse:
-      description: Gone - the resource has been deleted. Returned in place of 404 when the implementation supports deposit and declares a `tombstonePolicy` of `"410"`; the body is a tombstone describing the deletion. Under a `tombstonePolicy` of `"404"`, deleted resources return 404 instead.
+      description: Gone - the resource has been deleted. Returned in place of 404 when the implementation declares a `tombstonePolicy` of `"410"`; the body is a tombstone describing the deletion. Under a `tombstonePolicy` of `"404"`, deleted resources return 404 instead.
       content:
         application/json:
           schema:
@@ -1995,6 +1995,7 @@ components:
       required:
         - apiVersion
         - deposit
+        - tombstonePolicy
         - extensions
         - search
       properties:
@@ -2018,6 +2019,16 @@ components:
             segments: {}
         deposit:
           $ref: "#/components/schemas/DepositCapability"
+        tombstonePolicy:
+          type: string
+          enum:
+            - "410"
+            - "404"
+          description: |
+            What deleted resource URIs return. `"410"` - deleted URIs respond 410 Gone with a `Tombstone` body; `"404"` - deleted resources are indistinguishable from those that never existed. One policy covers RO-Crate, entity and file URIs alike; implementations MUST NOT mix them.
+
+            REQUIRED of every implementation, whether or not it provides the deposit surface: entities and files are mandatory core, so any catalog may hold a URI that no longer resolves.
+          example: "410"
         search:
           $ref: "#/components/schemas/SearchCapability"
     SearchCapability:
@@ -2062,7 +2073,9 @@ components:
       description: |
         Declares whether the implementation provides the optional deposit surface, and on what terms. This block is REQUIRED in `/capabilities`: every implementation states its position explicitly, so a client never has to infer read-only-ness from a missing key.
 
-        `supported` is the single flag clients check. When it is `true` the implementation provides the deposit and RO-Crate endpoints, and `idMinting`, `fileUpload` and `tombstonePolicy` MUST also be present. When it is `false` the implementation is read-only, the deposit and RO-Crate endpoints are not provided, and the remaining fields MUST be omitted.
+        `supported` is the single flag clients check. When it is `true` the implementation provides the deposit and RO-Crate endpoints, and `idMinting` and `fileUpload` MUST also be present. When it is `false` the implementation is read-only, the deposit and RO-Crate endpoints are not provided, and the remaining fields MUST be omitted.
+
+        Deletion behaviour is declared separately, in the top-level `tombstonePolicy`.
       required:
         - supported
       properties:
@@ -2088,13 +2101,6 @@ components:
               - presigned
           description: The file staging modes the implementation supports on `PUT /deposit/{id}/file/{fileId}`. `inline` - the file's bytes in the request body; `presigned` - transport metadata in the request, bytes uploaded directly to a returned target. New modes may be added by revision of this specification; clients MUST ignore values they do not recognise.
           example: [inline, presigned]
-        tombstonePolicy:
-          type: string
-          enum:
-            - "410"
-            - "404"
-          description: What deleted resource URIs return. `"410"` - deleted URIs respond 410 Gone with a `Tombstone` body; `"404"` - deleted resources are indistinguishable from those that never existed. One policy covers RO-Crate URIs (including `/crate`) and materialised entities alike.
-          example: "410"
         depositTtlSeconds:
           type: integer
           minimum: 1
@@ -2110,7 +2116,6 @@ components:
         - supported: true
           idMinting: both
           fileUpload: [inline, presigned]
-          tombstonePolicy: "410"
         - supported: false
     FacetCapability:
       type: object
@@ -2315,7 +2320,7 @@ components:
           items:
             $ref: "#/components/schemas/Id"
           description: |
-            Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only present when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+            Optional core — present only when `deposit.supported` is `true`.
 
             The RO-Crates whose current versions contribute to this entity. Usually one; more when the implementation's materialisation merges contributions from several RO-Crates into a single entity. An entity MAY be removed once no RO-Crate contributes to it.
           example:
@@ -2370,7 +2375,7 @@ components:
             content: true
         roCrateId:
           description: |
-            Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only present when the implementation declares `deposit.supported` as `true` in `/capabilities`.
+            Optional core — present only when `deposit.supported` is `true`.
 
             The RO-Crate whose deposit supplied this file's bytes. Singular, because a file's bytes arrive in exactly one deposit. May be absent for files predating any RO-Crate, or where the implementation withholds it.
           $ref: "#/components/schemas/Id"
@@ -2403,9 +2408,9 @@ components:
     Deposit:
       type: object
       description: |
-        A deposit session against an RO-Crate. Part of the optional deposit surface.
+        A deposit session against an RO-Crate.
 
-        A deposit is opened against a new RO-Crate (`POST /deposits`) or an existing one (`POST /ro-crate/{id}/deposits`), staged with an RO-Crate and files, then finalised. Deposits are single-use: once `complete` they are finished, and further changes open a new deposit.
+        A deposit is opened against a new RO-Crate (`POST /deposits`) or an existing one (`POST /ro-crate/{id}/deposits`), staged with a metadata document and files, then finalised. Deposits are single-use: once `complete` they are finished, and further changes open a new deposit.
       required:
         - depositId
         - roCrateId
@@ -2456,7 +2461,7 @@ components:
               message: staged file bytes not received
     StagedFile:
       type: object
-      description: A file staged in a deposit, with its upload status. Part of the optional deposit surface.
+      description: A file staged in a deposit, with its upload status.
       required:
         - fileId
         - status
@@ -2482,9 +2487,9 @@ components:
     RoCrate:
       type: object
       description: |
-        An RO-Crate is the unit of deposit: a metadata document plus all the files it references, stored as deposited. Part of the optional deposit surface.
+        An RO-Crate is the unit of deposit: a metadata document plus all the files it references, stored as deposited.
 
-        Catalog entities are materialised from RO-Crates by implementation-specific rules — one RO-Crate may yield one entity or many, and several RO-Crates may contribute to a single merged entity. The deposited metadata document (`GET /ro-crate/{id}/metadata`) is the single source of truth for the object's content inventory; the RO-Crate carries no file list of its own.
+        Catalog entities are materialised from RO-Crates by implementation-specific rules — one RO-Crate may yield one entity or many, and several RO-Crates may contribute to a single merged entity. The deposited metadata document (`GET /ro-crate/{id}/metadata`) is the single source of truth for the RO-Crate's content inventory; the RO-Crate carries no file list of its own.
       required:
         - id
         - entityIds
@@ -2539,7 +2544,7 @@ components:
     Tombstone:
       type: object
       description: |
-        A record of a deletion, returned with `410 Gone` when the implementation's `tombstonePolicy` is `"410"`. Part of the optional deposit surface. One policy covers RO-Crate URIs (including `/crate`) and materialised entities alike.
+        A record of a deletion, returned with `410 Gone` when the implementation's top-level `tombstonePolicy` capability is `"410"`. One policy covers RO-Crate, entity and file URIs alike.
       required:
         - id
         - resourceType
@@ -2571,7 +2576,7 @@ components:
     FileStagingMetadata:
       type: object
       description: |
-        Transport metadata staged for a file in presigned mode. Part of the optional deposit surface. Carries only what is needed to move and verify the bytes — descriptive metadata about the file lives in the deposited metadata document.
+        Transport metadata staged for a file in presigned mode. Carries only what is needed to move and verify the bytes — descriptive metadata about the file lives in the deposited metadata document.
       required:
         - size
       properties:
@@ -2593,7 +2598,7 @@ components:
           example: audio/x-wav
     FileUploadTarget:
       type: object
-      description: Where to send a file's bytes after staging it in presigned mode. Part of the optional deposit surface. There is no per-file completion call — finalise verifies the upload.
+      description: Where to send a file's bytes after staging it in presigned mode. There is no per-file completion call — finalise verifies the upload.
       required:
         - uploadUrl
       properties:
@@ -2895,8 +2900,8 @@ components:
           supported: true
           idMinting: "both"
           fileUpload: ["inline", "presigned"]
-          tombstonePolicy: "410"
           depositTtlSeconds: 604800
+        tombstonePolicy: "410"
         extensions:
           segments: {}
         search:
