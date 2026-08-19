@@ -15,13 +15,14 @@ it instead of relying on per-archive configuration or probing responses.
 ```json
 {
   "apiVersion": "0.3.0",
+  "deposit": {
+    "supported": true,
+    "idMinting": "both",
+    "fileUpload": ["inline", "presigned"],
+    "tombstonePolicy": "410"
+  },
   "extensions": {
-    "segments": {},
-    "deposit": {
-      "idMinting": "both",
-      "fileUpload": ["inline", "presigned"],
-      "tombstonePolicy": "410"
-    }
+    "segments": {}
   },
   "search": {
     "filters": {
@@ -46,6 +47,25 @@ The version of this specification the implementation targets. Use it to reason
 about core-level differences between archives as the specification evolves —
 the [changelog](https://github.com/Language-Research-Technology/ro-crate-api/blob/main/CHANGELOG.md)
 records what changed in each version.
+
+### `deposit`
+
+Whether the implementation provides the optional
+[deposit surface](/docs/deposit), and on what terms. Unlike the extensions
+below, this member is **required**: every implementation declares its position
+explicitly, so a read-only catalog is never mistaken for one whose capability
+document happens to be incomplete.
+
+`supported` is the flag clients check. A read-only catalog declares:
+
+```json
+{ "deposit": { "supported": false } }
+```
+
+When `supported` is `true`, `idMinting`, `fileUpload` and `tombstonePolicy`
+accompany it, along with the optional `depositTtlSeconds` and
+`maxFileSizeBytes`. See the [Deposits guide](/docs/deposit#declaring-the-capability)
+for what each field governs.
 
 ### `extensions`
 

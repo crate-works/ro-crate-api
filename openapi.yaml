@@ -16,7 +16,7 @@ info:
 
     When authentication is required, an API implementation MUST implement OAuth2 and it is recommended that OpenID is also added for simpler configuration and discoverability.
 
-    Write operations — the deposit and storage-object endpoints of the `deposit` extension — require the coarse OAuth2 `write` scope. Finer-grained authorisation policy (who may deposit what) is implementation-defined.
+    Write operations — the deposit and RO-Crate endpoints — require the coarse OAuth2 `write` scope. Finer-grained authorisation policy (who may deposit what) is implementation-defined.
 
     ## Rate Limiting
 
@@ -26,9 +26,11 @@ info:
 
     The core specification can be extended through a curated registry of extensions defined in this document. Every extension has a stable identifier, a schema, and semantics. Implementations choose which extensions to implement and declare them through the `GET /capabilities` endpoint. Extension properties appear in core schemas as optional fields tagged with an `x-extension` annotation. See the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions) for the full extension model.
 
-    ## Deposits and storage objects
+    ## Deposits and RO-Crates
 
-    Implementations may support write access through the registered `deposit` extension. All writes flow through deposit sessions against **storage objects** — an RO-Crate plus all the files it references, deposited and stored as a unit. The implementation materialises catalog entities from storage objects by its own rules; entities are read-only projections and have no write endpoints of their own. Write support is discovered by the presence of the `deposit` key in `capabilities.extensions`.
+    Deposit is part of the core specification but is optional to provide: a read-only catalog remains conformant without it. All writes flow through deposit sessions against **RO-Crates** — a metadata document plus all the files it references, deposited and stored as a unit. The implementation materialises catalog entities from RO-Crates by its own rules; entities are read-only projections and have no write endpoints of their own.
+
+    Every implementation declares where it stands: the `deposit` block in `GET /capabilities` is always present, and its required `supported` flag states plainly whether the deposit surface is available. This is not an extension — it is not keyed in `capabilities.extensions` and its fields carry no `x-extension` annotation.
 
   contact:
     name: Issues
@@ -62,11 +64,11 @@ tags:
     description: Endpoints to perform searches on archived media and metadata.
     x-displayName: Search
   - name: deposits
-    description: Endpoints for depositing content — open a deposit session against a storage object, stage an RO-Crate and files, and finalise. Part of the `deposit` extension.
+    description: Endpoints for depositing content — open a deposit session against an RO-Crate, stage its metadata document and files, and finalise. Optional core — provided when `deposit.supported` is `true`.
     x-displayName: Deposits
-  - name: storage_objects
-    description: Endpoints for reading and deleting storage objects — the deposited RO-Crates and files from which catalog entities are materialised. Part of the `deposit` extension.
-    x-displayName: Storage Objects
+  - name: ro_crates
+    description: Endpoints for reading and deleting RO-Crates — the deposited metadata documents and files from which catalog entities are materialised. Optional core — provided when `deposit.supported` is `true`.
+    x-displayName: RO-Crates
   - name: entity_model
     x-displayName: The Entity Model
     description: |
@@ -80,7 +82,7 @@ x-tagGroups:
       - files
       - search
       - deposits
-      - storage_objects
+      - ro_crates
   - name: Models
     tags:
       - entity_model
@@ -247,15 +249,14 @@ paths:
         - entities
       summary: Delete a contributor-less entity
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Delete an entity that no storage object contributes to — its `storageObjectIds` is empty. Such entities (for example an Organisation whose last contributing storage object was deleted but which the implementation chose to retain) cannot be reached by any deposit-session operation, so this is the one entity-level write.
+        Delete an entity that no RO-Crate contributes to — its `roCrateIds` is empty. Such entities (for example an Organisation whose last contributing RO-Crate was deleted but which the implementation chose to retain) cannot be reached by any deposit-session operation, so this is the one entity-level write.
 
-        An entity with contributing storage objects cannot be deleted directly — its lifecycle is governed by its storage objects — and the request is rejected with `409 Conflict`.
+        An entity with contributing RO-Crates cannot be deleted directly — its lifecycle is governed by its RO-Crates — and the request is rejected with `409 Conflict`.
 
         After deletion the entity's URI follows the implementation's declared `tombstonePolicy`.
       operationId: deleteEntity
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -296,7 +297,7 @@ paths:
                 default:
                   $ref: "#/components/examples/NotFoundErrorResponse"
         "409":
-          description: Conflict - the entity has contributing storage objects and must be managed through them
+          description: Conflict - the entity has contributing RO-Crates and must be managed through them
           content:
             application/json:
               schema:
@@ -321,7 +322,7 @@ paths:
 
         This endpoint works for any entity type (Collection, Object, or MediaObject) and returns the associated ro-crate-metadata.json content.
 
-        The returned document's provenance is implementation-defined: it may be a stored crate, or a view derived from the crate(s) of the entity's contributing storage objects. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve an original deposited crate verbatim, use `GET /storage-object/{id}/crate` (part of the `deposit` extension).
+        The returned document's provenance is implementation-defined: it may be a stored metadata document, or a view derived from the metadata documents of the entity's contributing RO-Crates. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve an original deposited crate verbatim, use `GET /ro-crate/{id}/metadata` (available where the implementation supports deposit).
       operationId: getEntityCrate
       parameters:
         - name: id
@@ -982,19 +983,18 @@ paths:
     post:
       tags:
         - deposits
-      summary: Create a deposit for a new storage object
+      summary: Create a deposit for a new RO-Crate
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Open a deposit session that will create a new storage object. The storage object comes into existence only at the deposit's first successful finalise — until then nothing is readable and no entities exist.
+        Open a deposit session that will create a new RO-Crate. The RO-Crate comes into existence only at the deposit's first successful finalise — until then nothing is readable and no entities exist.
 
-        The request body MAY propose a `storageObjectId` where the implementation's `idMinting` capability is `client` or `both`; when the body or the field is absent the server mints one (`server` or `both`). Proposing an ID that is not supported by the declared `idMinting` mode is rejected with `422`; proposing an ID that already exists is rejected with `409`. The storage-object ID is returned immediately so the client can reference it from the deposited crate; whether the crate MUST reference it is implementation-defined and enforced at finalise.
+        The request body MAY propose a `roCrateId` where the implementation's `idMinting` capability is `client` or `both`; when the body or the field is absent the server mints one (`server` or `both`). Proposing an ID that is not supported by the declared `idMinting` mode is rejected with `422`; proposing an ID that already exists is rejected with `409`. The RO-Crate ID is returned immediately so the client can reference it from the deposited metadata document; whether the metadata document MUST reference it is implementation-defined and enforced at finalise.
 
-        A previously deleted storage-object ID MAY be reused; implementations MAY refuse with `409`. Recreation is a new storage object, not a continuation — no relationship to the deleted object's history or entities is implied.
+        A previously deleted RO-Crate ID MAY be reused; implementations MAY refuse with `409`. Recreation is a new RO-Crate, not a continuation — no relationship to the deleted object's history or entities is implied.
 
-        To update an existing storage object, use `POST /storage-object/{id}/deposits` instead.
+        To update an existing RO-Crate, use `POST /ro-crate/{id}/deposits` instead.
       operationId: createDeposit
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1008,8 +1008,8 @@ paths:
             schema:
               type: object
               properties:
-                storageObjectId:
-                  description: A client-proposed ID for the new storage object. Only valid when the implementation's `idMinting` capability is `client` or `both`.
+                roCrateId:
+                  description: A client-proposed ID for the new RO-Crate. Only valid when the implementation's `idMinting` capability is `client` or `both`.
                   $ref: "#/components/schemas/Id"
       responses:
         "201":
@@ -1041,7 +1041,7 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "409":
-          description: Conflict - a storage object with the proposed ID already exists, or the implementation refuses to reuse a deleted ID
+          description: Conflict - an RO-Crate with the proposed ID already exists, or the implementation refuses to reuse a deleted ID
           content:
             application/json:
               schema:
@@ -1069,11 +1069,10 @@ paths:
         - deposits
       summary: Get a deposit
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
         Retrieve the deposit, including its lifecycle state, the files staged so far with per-file upload status, and the violations recorded by the most recent failed finalise. This is the polling resource for asynchronous finalisation: after a `202` from finalise, poll here until the state leaves `finalising`.
       operationId: getDeposit
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1114,13 +1113,12 @@ paths:
         - deposits
       summary: Abort a deposit
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Abort an `open` deposit, discarding its staged crate and files. Aborting is terminal; the storage object is left at its prior version (or never comes into existence for a create deposit).
+        Abort an `open` deposit, discarding its staged crate and files. Aborting is terminal; the RO-Crate is left at its prior version (or never comes into existence for a create deposit).
 
         Deposits are also subject to implementation-defined expiry — an expired deposit behaves as aborted, and subsequent access MAY return `404`. Where the implementation declares `depositTtlSeconds` in `/capabilities`, that is the expiry horizon.
       operationId: abortDeposit
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1159,19 +1157,18 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /deposit/{id}/crate:
+  /deposit/{id}/metadata:
     put:
       tags:
         - deposits
-      summary: Stage the RO-Crate metadata
+      summary: Stage the metadata document
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Stage the RO-Crate metadata document for this deposit. This is a full replace — staging a new crate discards the previously staged one; there is no crate PATCH and no crate DELETE. The crate and files may be staged in any order; crate–file association is checked at finalise.
+        Stage the RO-Crate metadata document for this deposit. This is a full replace — staging a new metadata document discards the previously staged one; there is no metadata PATCH and no metadata DELETE. The metadata document and files may be staged in any order; metadata–file association is checked at finalise.
 
-        At finalise the staged crate becomes the storage object's authoritative file manifest: each file entity in the crate resolves to bytes staged in this deposit, else (for update deposits) to the file carried forward by `@id` from the baseline version, else remains an unresolved reference. Unresolved references are not protocol errors — they simply `404` when followed — but implementations MAY reject them at finalise via validation. Files present in the baseline but absent from the new crate drop out of the new version.
-      operationId: stageDepositCrate
-      x-extension: deposit
+        At finalise the staged crate becomes the RO-Crate's authoritative file manifest: each file entity in the metadata document resolves to bytes staged in this deposit, else (for update deposits) to the file carried forward by `@id` from the baseline version, else remains an unresolved reference. Unresolved references are not protocol errors — they simply `404` when followed — but implementations MAY reject them at finalise via validation. Files present in the baseline but absent from the new crate drop out of the new version.
+      operationId: stageDepositMetadata
       security:
         - ApiKey: []
         - OAuth2:
@@ -1232,18 +1229,17 @@ paths:
         - deposits
       summary: Stage a file
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Stage a file in this deposit. `{fileId}` is the file entity's `@id` in the deposited crate, percent-encoded — for attached files, its crate-relative path. The crate and files may be staged in any order.
+        Stage a file in this deposit. `{fileId}` is the file entity's `@id` in the deposited metadata document, percent-encoded — for attached files, its crate-relative path. The metadata document and files may be staged in any order.
 
         Two upload modes share this endpoint, discriminated by the request `Content-Type`; the implementation declares which it supports in the `fileUpload` capability:
 
         - **Inline** (`fileUpload` contains `inline`): the request body is the file's bytes, sent with the file's own media type. Responds `204`.
         - **Presigned** (`fileUpload` contains `presigned`): the request body is `application/json` transport metadata (size, checksum, media type) and the response is `200` with an upload target the client sends the bytes to directly. There is no per-file completion call — finalise verifies that the bytes landed and match the declared size and checksum.
 
-        Only transport metadata is carried here; descriptive metadata about the file lives in the crate. Staging the same `{fileId}` again replaces the earlier staging. Using a mode the implementation does not declare is rejected with `400`.
+        Only transport metadata is carried here; descriptive metadata about the file lives in the metadata document. Staging the same `{fileId}` again replaces the earlier staging. Using a mode the implementation does not declare is rejected with `400`.
       operationId: stageDepositFile
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1255,7 +1251,7 @@ paths:
         - name: fileId
           in: path
           required: true
-          description: The file entity's `@id` in the deposited crate, percent-encoded. For attached files this is the crate-relative path.
+          description: The file entity's `@id` in the deposited metadata document, percent-encoded. For attached files this is the crate-relative path.
           example: NT1-001-001A.mp3
           schema:
             type: string
@@ -1325,11 +1321,10 @@ paths:
         - deposits
       summary: Remove a staged file
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Remove a file staged in this deposit. Valid while the deposit is `open`. This only affects the deposit's staging area — to drop a file from an existing storage object, stage a crate that no longer references it.
+        Remove a file staged in this deposit. Valid while the deposit is `open`. This only affects the deposit's staging area — to drop a file from an existing RO-Crate, stage a crate that no longer references it.
       operationId: unstageDepositFile
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1341,7 +1336,7 @@ paths:
         - name: fileId
           in: path
           required: true
-          description: The file entity's `@id` in the deposited crate, percent-encoded. For attached files this is the crate-relative path.
+          description: The file entity's `@id` in the deposited metadata document, percent-encoded. For attached files this is the crate-relative path.
           example: NT1-001-001A.mp3
           schema:
             type: string
@@ -1382,19 +1377,18 @@ paths:
         - deposits
       summary: Finalise a deposit
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Finalise the deposit: validate the staged content, publish it as the storage object's new current version (replacing the prior version wholesale), and materialise catalog entities from it. Validation depth and materialisation rules are implementation-defined.
+        Finalise the deposit: validate the staged content, publish it as the RO-Crate's new current version (replacing the prior version wholesale), and materialise catalog entities from it. Validation depth and materialisation rules are implementation-defined.
 
         Finalisation MAY complete synchronously or asynchronously, at the server's discretion per request — there is no capability flag. A `200` returns the deposit in state `complete`; a `202` returns it in state `finalising`, and the client polls `GET /deposit/{id}` until the state leaves `finalising`. One client code path handles both.
 
         For every file staged in presigned mode, finalise verifies the bytes landed and match the declared size and checksum; missing or mismatched files are validation violations.
 
-        **Failure atomicity is guaranteed**: a finalise that does not reach `complete` leaves no observable change. On validation failure the deposit returns to `open` with the violations recorded — as a `422` on the synchronous path, and in the deposit's `errors` field on the asynchronous path. Non-validation failures (including the target storage object having been deleted mid-deposit) also return the deposit to `open` with the failure recorded; retry is safe, and abort covers walking away. Once `complete`, the new crate and all materialised entities are readable; readers are not guaranteed to observe the transition as a single atomic flip.
+        **Failure atomicity is guaranteed**: a finalise that does not reach `complete` leaves no observable change. On validation failure the deposit returns to `open` with the violations recorded — as a `422` on the synchronous path, and in the deposit's `errors` field on the asynchronous path. Non-validation failures (including the target RO-Crate having been deleted mid-deposit) also return the deposit to `open` with the failure recorded; retry is safe, and abort covers walking away. Once `complete`, the new metadata document and all materialised entities are readable; readers are not guaranteed to observe the transition as a single atomic flip.
 
         For update deposits, carry-forward resolves against the baseline version pinned when the deposit was opened; the last finalise wins as a unit. Implementations MAY reject a finalise whose baseline has been superseded with `409`.
       operationId: finaliseDeposit
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1405,7 +1399,7 @@ paths:
         - $ref: "#/components/parameters/DepositIdParameter"
       responses:
         "200":
-          description: Finalised synchronously - the deposit is `complete` and the storage object's new version is published
+          description: Finalised synchronously - the deposit is `complete` and the RO-Crate's new version is published
           content:
             application/json:
               schema:
@@ -1458,23 +1452,22 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /storage-objects:
+  /ro-crates:
     get:
       tags:
-        - storage_objects
-      summary: List storage objects
+        - ro_crates
+      summary: List RO-Crates
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        List storage objects, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether storage objects are a public surface (listable by anyone, with per-object `access` governing crate retrieval) or a depositor-only management surface (requiring the `write` scope).
+        List RO-Crates, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether RO-Crates are a public surface (listable by anyone, with per-object `access` governing metadata-document retrieval) or a depositor-only management surface (requiring the `write` scope).
 
         There are no content filters — catalog-side questions belong to `/entities` and `/search`.
-      operationId: listStorageObjects
-      x-extension: deposit
+      operationId: listRoCrates
       parameters:
         - $ref: "#/components/parameters/LimitParameter"
         - $ref: "#/components/parameters/OffsetParameter"
-        - $ref: "#/components/parameters/StorageObjectSortParameter"
+        - $ref: "#/components/parameters/RoCrateSortParameter"
         - $ref: "#/components/parameters/OrderParameter"
       responses:
         "200":
@@ -1483,22 +1476,22 @@ paths:
             application/json:
               schema:
                 type: object
-                description: A list of storage objects visible to the caller.
+                description: A list of RO-Crates visible to the caller.
                 required:
                   - total
-                  - storageObjects
+                  - roCrates
                 properties:
                   total:
-                    description: Total number of storage objects (before pagination) visible to the caller.
+                    description: Total number of RO-Crates (before pagination) visible to the caller.
                     type: integer
                     example: 42
-                  storageObjects:
+                  roCrates:
                     type: array
                     items:
-                      $ref: "#/components/schemas/StorageObject"
+                      $ref: "#/components/schemas/RoCrate"
               examples:
-                StorageObjectsListResponse:
-                  $ref: "#/components/examples/StorageObjectsListResponse"
+                RoCratesListResponse:
+                  $ref: "#/components/examples/RoCratesListResponse"
         "400":
           description: Bad Request - Invalid parameters
           content:
@@ -1517,37 +1510,36 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /storage-object/{id}:
+  /ro-crate/{id}:
     get:
       tags:
-        - storage_objects
-      summary: Get a storage object
+        - ro_crates
+      summary: Get an RO-Crate
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Retrieve a storage object. The body is deliberately lean: identity, the entities materialised from the current version, timestamps, and access. The deposited crate — `GET /storage-object/{id}/crate` — is the single source of truth for the object's content inventory; the storage object carries no file list of its own.
+        Retrieve an RO-Crate. The body is deliberately lean: identity, the entities materialised from the current version, timestamps, and access. The deposited metadata document — `GET /ro-crate/{id}/metadata` — is the single source of truth for the object's content inventory; the RO-Crate carries no file list of its own.
 
-        `entityIds` is the authoritative answer to "what did my deposit create". It is the inverse of the entity's `storageObjectIds` and can change when later deposits (of this or other storage objects) alter the materialisation.
-      operationId: getStorageObject
-      x-extension: deposit
+        `entityIds` is the authoritative answer to "what did my deposit create". It is the inverse of the entity's `roCrateIds` and can change when later deposits (of this or other RO-Crates) alter the materialisation.
+      operationId: getRoCrate
       parameters:
-        - $ref: "#/components/parameters/StorageObjectIdParameter"
+        - $ref: "#/components/parameters/RoCrateIdParameter"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StorageObject"
+                $ref: "#/components/schemas/RoCrate"
               examples:
-                StorageObjectResponse:
-                  $ref: "#/components/examples/StorageObjectResponse"
+                RoCrateResponse:
+                  $ref: "#/components/examples/RoCrateResponse"
         "401":
           $ref: "#/components/responses/UnauthorizedResponse"
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":
-          description: Storage object not found
+          description: RO-Crate not found
           content:
             application/json:
               schema:
@@ -1563,20 +1555,19 @@ paths:
           $ref: "#/components/responses/InternalServerErrorResponse"
     delete:
       tags:
-        - storage_objects
-      summary: Delete a storage object
+        - ro_crates
+      summary: Delete an RO-Crate
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Delete a storage object — its crate and files. Deletion is not a deposit session; it is already atomic. Implementations needing slow teardown MAY return `202 Accepted`.
+        Delete an RO-Crate — its crate and files. Deletion is not a deposit session; it is already atomic. Implementations needing slow teardown MAY return `202 Accepted`.
 
-        The spec mandates no preconditions; implementations MAY refuse per their own policy (curatorial holds, cross-references) with `409` and a reason. The effect on materialised entities is implementation-defined, mirroring re-deposit pruning: an entity no other storage object contributes to MAY be removed, and deliberate retention is legitimate. An entity with other contributors survives — the deleted object simply drops out of its `storageObjectIds`.
+        The spec mandates no preconditions; implementations MAY refuse per their own policy (curatorial holds, cross-references) with `409` and a reason. The effect on materialised entities is implementation-defined, mirroring re-deposit pruning: an entity no other RO-Crate contributes to MAY be removed, and deliberate retention is legitimate. An entity with other contributors survives — the deleted object simply drops out of its `roCrateIds`.
 
         Open deposits do not block deletion: delete wins, and a subsequent finalise of such a deposit fails back to `open` with the failure recorded. Implementations MAY auto-abort open deposits against the deleted object.
 
-        After deletion, the storage object's URIs (including `/crate`) follow the implementation's declared `tombstonePolicy`.
-      operationId: deleteStorageObject
-      x-extension: deposit
+        After deletion, the RO-Crate's URIs (including `/crate`) follow the implementation's declared `tombstonePolicy`.
+      operationId: deleteRoCrate
       security:
         - ApiKey: []
         - OAuth2:
@@ -1584,10 +1575,10 @@ paths:
         - OpenID:
             - write
       parameters:
-        - $ref: "#/components/parameters/StorageObjectIdParameter"
+        - $ref: "#/components/parameters/RoCrateIdParameter"
       responses:
         "204":
-          description: Storage object deleted
+          description: RO-Crate deleted
         "202":
           description: Accepted - deletion is proceeding asynchronously
         "401":
@@ -1595,7 +1586,7 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":
-          description: Storage object not found
+          description: RO-Crate not found
           content:
             application/json:
               schema:
@@ -1619,19 +1610,18 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /storage-object/{id}/crate:
+  /ro-crate/{id}/metadata:
     get:
       tags:
-        - storage_objects
-      summary: Get the deposited RO-Crate
+        - ro_crates
+      summary: Get the deposited metadata document
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Retrieve the storage object's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns an original deposited crate.
-      operationId: getStorageObjectCrate
-      x-extension: deposit
+        Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns an original deposited crate.
+      operationId: getRoCrateMetadata
       parameters:
-        - $ref: "#/components/parameters/StorageObjectIdParameter"
+        - $ref: "#/components/parameters/RoCrateIdParameter"
       responses:
         "200":
           description: Returns the deposited RO-Crate JSON-LD metadata
@@ -1665,7 +1655,7 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":
-          description: Storage object not found
+          description: RO-Crate not found
           content:
             application/json:
               schema:
@@ -1681,16 +1671,15 @@ paths:
           $ref: "#/components/responses/InternalServerErrorResponse"
     head:
       tags:
-        - storage_objects
-      summary: Get deposited RO-Crate headers
+        - ro_crates
+      summary: Get deposited metadata document headers
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Retrieve the deposited crate's headers without downloading the content. Returns the same headers as GET but with no response body, useful for checking availability and caching information.
-      operationId: headStorageObjectCrate
-      x-extension: deposit
+        Retrieve the deposited metadata document's headers without downloading the content. Returns the same headers as GET but with no response body, useful for checking availability and caching information.
+      operationId: headRoCrateMetadata
       parameters:
-        - $ref: "#/components/parameters/StorageObjectIdParameter"
+        - $ref: "#/components/parameters/RoCrateIdParameter"
       responses:
         "200":
           description: Deposited RO-Crate headers
@@ -1719,7 +1708,7 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":
-          description: Storage object not found
+          description: RO-Crate not found
           content:
             application/json:
               schema:
@@ -1734,19 +1723,18 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /storage-object/{id}/deposits:
+  /ro-crate/{id}/deposits:
     post:
       tags:
         - deposits
-      summary: Create a deposit to update a storage object
+      summary: Create a deposit to update an RO-Crate
       description: |
-        Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only available when the implementation declares the `deposit` extension in `/capabilities`.
+        Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only available when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-        Open a deposit session against an existing storage object. The deposit starts logically empty; the client stages a new crate plus only the files that changed. At finalise the new crate is the authoritative file manifest — unchanged files are carried forward from the baseline by `@id`, and files absent from the new crate drop out. A metadata-only fix is therefore just `PUT /deposit/{id}/crate` followed by finalise.
+        Open a deposit session against an existing RO-Crate. The deposit starts logically empty; the client stages a new metadata document plus only the files that changed. At finalise the new metadata document is the authoritative file manifest — unchanged files are carried forward from the baseline by `@id`, and files absent from the new metadata document drop out. A metadata-only fix is therefore just `PUT /deposit/{id}/metadata` followed by finalise.
 
-        The baseline for carry-forward is the storage object's current version at the moment this deposit is created. Concurrent open deposits against one storage object are allowed; each finalise replaces the storage object wholesale, so the last finalise wins as a unit.
+        The baseline for carry-forward is the RO-Crate's current version at the moment this deposit is created. Concurrent open deposits against one RO-Crate are allowed; each finalise replaces the RO-Crate wholesale, so the last finalise wins as a unit.
       operationId: createUpdateDeposit
-      x-extension: deposit
       security:
         - ApiKey: []
         - OAuth2:
@@ -1754,7 +1742,7 @@ paths:
         - OpenID:
             - write
       parameters:
-        - $ref: "#/components/parameters/StorageObjectIdParameter"
+        - $ref: "#/components/parameters/RoCrateIdParameter"
       responses:
         "201":
           description: Deposit created
@@ -1776,7 +1764,7 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "404":
-          description: Storage object not found
+          description: RO-Crate not found
           content:
             application/json:
               schema:
@@ -1859,15 +1847,15 @@ components:
       example: dep_8f14e45f
       schema:
         type: string
-    StorageObjectIdParameter:
+    RoCrateIdParameter:
       name: id
       in: path
       required: true
-      description: The storage object ID.
+      description: The RO-Crate ID.
       example: https://catalog.paradisec.org.au/repository/NT1/001
       schema:
         $ref: "#/components/schemas/Id"
-    StorageObjectSortParameter:
+    RoCrateSortParameter:
       name: sort
       in: query
       description: Field to sort by.
@@ -1931,7 +1919,7 @@ components:
             default:
               $ref: "#/components/examples/InternalServerErrorResponse"
     GoneResponse:
-      description: Gone - the resource has been deleted. Returned in place of 404 when the implementation declares the `deposit` extension with a `tombstonePolicy` of `"410"`; the body is a tombstone describing the deletion. Under a `tombstonePolicy` of `"404"`, deleted resources return 404 instead.
+      description: Gone - the resource has been deleted. Returned in place of 404 when the implementation supports deposit and declares a `tombstonePolicy` of `"410"`; the body is a tombstone describing the deletion. Under a `tombstonePolicy` of `"404"`, deleted resources return 404 instead.
       content:
         application/json:
           schema:
@@ -1961,7 +1949,7 @@ components:
           tokenUrl: /oauth/token
           scopes:
             read: Grants read access
-            write: Grants write access through deposit sessions (the `deposit` extension). Finer-grained authorisation policy is implementation-defined.
+            write: Grants write access through deposit sessions. Finer-grained authorisation policy is implementation-defined.
 
   schemas:
     Id:
@@ -2003,9 +1991,10 @@ components:
       description: Used to specify the order in sorting results.
     Capabilities:
       type: object
-      description: Declares what an implementation supports — the spec version it targets, the registered extensions it implements, and the search filters and facets it provides.
+      description: Declares what an implementation supports — the spec version it targets, whether it provides the optional deposit surface, the registered extensions it implements, and the search filters and facets it provides.
       required:
         - apiVersion
+        - deposit
         - extensions
         - search
       properties:
@@ -2023,17 +2012,12 @@ components:
             segments:
               $ref: "#/components/schemas/SegmentsCapability"
               x-extension: segments
-            deposit:
-              $ref: "#/components/schemas/DepositCapability"
-              x-extension: deposit
           additionalProperties:
             type: object
           example:
             segments: {}
-            deposit:
-              idMinting: both
-              fileUpload: [inline, presigned]
-              tombstonePolicy: "410"
+        deposit:
+          $ref: "#/components/schemas/DepositCapability"
         search:
           $ref: "#/components/schemas/SearchCapability"
     SearchCapability:
@@ -2076,20 +2060,23 @@ components:
     DepositCapability:
       type: object
       description: |
-        Details the implementation communicates about its `deposit` support. Presence of the `deposit` key in `capabilities.extensions` is how clients discover write support; there is no separate write flag.
-      x-extension: deposit
+        Declares whether the implementation provides the optional deposit surface, and on what terms. This block is REQUIRED in `/capabilities`: every implementation states its position explicitly, so a client never has to infer read-only-ness from a missing key.
+
+        `supported` is the single flag clients check. When it is `true` the implementation provides the deposit and RO-Crate endpoints, and `idMinting`, `fileUpload` and `tombstonePolicy` MUST also be present. When it is `false` the implementation is read-only, the deposit and RO-Crate endpoints are not provided, and the remaining fields MUST be omitted.
       required:
-        - idMinting
-        - fileUpload
-        - tombstonePolicy
+        - supported
       properties:
+        supported:
+          type: boolean
+          description: Whether the implementation provides the deposit surface. `true` - deposits are accepted and the deposit and RO-Crate endpoints are available; `false` - the implementation is read-only.
+          example: true
         idMinting:
           type: string
           enum:
             - client
             - server
             - both
-          description: How storage-object IDs are minted at deposit creation. `client` - the client MUST propose an ID; `server` - the server always mints one; `both` - the client MAY propose an ID and the server mints one when absent.
+          description: How RO-Crate IDs are minted at deposit creation. `client` - the client MUST propose an ID; `server` - the server always mints one; `both` - the client MAY propose an ID and the server mints one when absent.
           example: both
         fileUpload:
           type: array
@@ -2106,7 +2093,7 @@ components:
           enum:
             - "410"
             - "404"
-          description: What deleted resource URIs return. `"410"` - deleted URIs respond 410 Gone with a `Tombstone` body; `"404"` - deleted resources are indistinguishable from those that never existed. One policy covers storage-object URIs (including `/crate`) and materialised entities alike.
+          description: What deleted resource URIs return. `"410"` - deleted URIs respond 410 Gone with a `Tombstone` body; `"404"` - deleted resources are indistinguishable from those that never existed. One policy covers RO-Crate URIs (including `/crate`) and materialised entities alike.
           example: "410"
         depositTtlSeconds:
           type: integer
@@ -2119,6 +2106,12 @@ components:
           minimum: 1
           description: The largest file the implementation accepts in a deposit. When absent, no limit is declared.
           example: 5368709120
+      examples:
+        - supported: true
+          idMinting: both
+          fileUpload: [inline, presigned]
+          tombstonePolicy: "410"
+        - supported: false
     FacetCapability:
       type: object
       description: Describes a search facet field the implementation supports.
@@ -2317,15 +2310,14 @@ components:
             metadata: true
             content: false
             contentAuthorizationUrl: "https://test.cadre.example.com/catalogue/application?id=https%3A%2F%2Fhttps%3A%2F%2Fcatalog.paradisec.org.au%2Flicenses%2Ftest"
-        storageObjectIds:
+        roCrateIds:
           type: array
           items:
             $ref: "#/components/schemas/Id"
-          x-extension: deposit
           description: |
-            Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only present when the implementation declares the `deposit` extension in `/capabilities`.
+            Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only present when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-            The storage objects whose current versions contribute to this entity. Usually one; more when the implementation's materialisation merges contributions from several storage objects into a single entity. An entity MAY be removed once no storage object contributes to it.
+            The RO-Crates whose current versions contribute to this entity. Usually one; more when the implementation's materialisation merges contributions from several RO-Crates into a single entity. An entity MAY be removed once no RO-Crate contributes to it.
           example:
             - https://catalog.paradisec.org.au/repository/NT1/001
     File:
@@ -2376,12 +2368,11 @@ components:
               description: URL for enrolment or authorisation process if content access is restricted.
           example:
             content: true
-        storageObjectId:
-          x-extension: deposit
+        roCrateId:
           description: |
-            Part of the `deposit` extension — see the [Extensions guide](https://language-research-technology.github.io/ro-crate-api/docs/extensions). Only present when the implementation declares the `deposit` extension in `/capabilities`.
+            Part of the optional deposit surface — see the [Deposits guide](https://language-research-technology.github.io/ro-crate-api/docs/deposit). Only present when the implementation declares `deposit.supported` as `true` in `/capabilities`.
 
-            The storage object whose deposit supplied this file's bytes. Singular, because a file's bytes arrive in exactly one deposit. May be absent for files predating any storage object, or where the implementation withholds it.
+            The RO-Crate whose deposit supplied this file's bytes. Singular, because a file's bytes arrive in exactly one deposit. May be absent for files predating any RO-Crate, or where the implementation withholds it.
           $ref: "#/components/schemas/Id"
     SearchEntity:
       description: Contains additional information returned in search contexts.
@@ -2411,22 +2402,21 @@ components:
                 Locations inside the file where the full-text match occurred, allowing clients to deep-link the user to the match (e.g. a PDF page or an ELAN annotation's time range). Segments are optional — absent or empty for hits without structured content. They are ranked by relevance and capped at an implementation-defined limit.
     Deposit:
       type: object
-      x-extension: deposit
       description: |
-        A deposit session against a storage object. Part of the `deposit` extension.
+        A deposit session against an RO-Crate. Part of the optional deposit surface.
 
-        A deposit is opened against a new storage object (`POST /deposits`) or an existing one (`POST /storage-object/{id}/deposits`), staged with an RO-Crate and files, then finalised. Deposits are single-use: once `complete` they are finished, and further changes open a new deposit.
+        A deposit is opened against a new RO-Crate (`POST /deposits`) or an existing one (`POST /ro-crate/{id}/deposits`), staged with an RO-Crate and files, then finalised. Deposits are single-use: once `complete` they are finished, and further changes open a new deposit.
       required:
         - depositId
-        - storageObjectId
+        - roCrateId
         - state
       properties:
         depositId:
           type: string
           description: Server-minted opaque identifier for this deposit.
           example: dep_8f14e45f
-        storageObjectId:
-          description: The storage object this deposit targets. Once the deposit is `complete`, retrieve it via `GET /storage-object/{id}` — its `entityIds` list is the authoritative answer to what the deposit materialised.
+        roCrateId:
+          description: The RO-Crate this deposit targets. Once the deposit is `complete`, retrieve it via `GET /ro-crate/{id}` — its `entityIds` list is the authoritative answer to what the deposit materialised.
           $ref: "#/components/schemas/Id"
         state:
           type: string
@@ -2436,7 +2426,7 @@ components:
             - complete
             - aborted
           description: |
-            The deposit's lifecycle state. `open` - accepting staging calls; `finalising` - a finalise is in progress and staging calls are rejected with 409; `complete` - the storage object's new version is published (terminal); `aborted` - explicitly aborted or expired, staged content discarded (terminal). A failed finalise returns the deposit to `open` with the failure recorded in `errors`.
+            The deposit's lifecycle state. `open` - accepting staging calls; `finalising` - a finalise is in progress and staging calls are rejected with 409; `complete` - the RO-Crate's new version is published (terminal); `aborted` - explicitly aborted or expired, staged content discarded (terminal). A failed finalise returns the deposit to `open` with the failure recorded in `errors`.
           example: open
         createdAt:
           type: string
@@ -2466,8 +2456,7 @@ components:
               message: staged file bytes not received
     StagedFile:
       type: object
-      x-extension: deposit
-      description: A file staged in a deposit, with its upload status. Part of the `deposit` extension.
+      description: A file staged in a deposit, with its upload status. Part of the optional deposit surface.
       required:
         - fileId
         - status
@@ -2475,7 +2464,7 @@ components:
         fileId:
           type: string
           format: uri-reference
-          description: The file entity's `@id` in the deposited crate. For attached files this is the crate-relative path.
+          description: The file entity's `@id` in the deposited metadata document. For attached files this is the crate-relative path.
           example: NT1-001-001A.mp3
         status:
           type: string
@@ -2490,13 +2479,12 @@ components:
           minimum: 0
           description: The file's size in bytes, where declared or known.
           example: 2048576
-    StorageObject:
+    RoCrate:
       type: object
-      x-extension: deposit
       description: |
-        A storage object is the unit of deposit: an RO-Crate plus all the files it references, stored as deposited. Part of the `deposit` extension.
+        An RO-Crate is the unit of deposit: a metadata document plus all the files it references, stored as deposited. Part of the optional deposit surface.
 
-        Catalog entities are materialised from storage objects by implementation-specific rules — one storage object may yield one entity or many, and several storage objects may contribute to a single merged entity. The deposited crate (`GET /storage-object/{id}/crate`) is the single source of truth for the object's content inventory; the storage object carries no file list of its own.
+        Catalog entities are materialised from RO-Crates by implementation-specific rules — one RO-Crate may yield one entity or many, and several RO-Crates may contribute to a single merged entity. The deposited metadata document (`GET /ro-crate/{id}/metadata`) is the single source of truth for the object's content inventory; the RO-Crate carries no file list of its own.
       required:
         - id
         - entityIds
@@ -2505,38 +2493,38 @@ components:
         - access
       properties:
         id:
-          description: The storage object's ID.
+          description: The RO-Crate's ID.
           example: https://catalog.paradisec.org.au/repository/NT1/001
           $ref: "#/components/schemas/Id"
         entityIds:
           type: array
           items:
             $ref: "#/components/schemas/Id"
-          description: The entities materialised from this storage object's current version — the inverse of the entity's `storageObjectIds`. Can change when later deposits (of this or other storage objects) alter the materialisation.
+          description: The entities materialised from this RO-Crate's current version — the inverse of the entity's `roCrateIds`. Can change when later deposits (of this or other RO-Crates) alter the materialisation.
           example:
             - https://catalog.paradisec.org.au/repository/NT1/001
             - https://catalog.paradisec.org.au/repository/NT1/001/NT1-001-001A.mp3
         createdAt:
           type: string
           format: date-time
-          description: When the storage object was first created (its first successful finalise).
+          description: When the RO-Crate was first created (its first successful finalise).
         lastDepositedAt:
           type: string
           format: date-time
-          description: When the storage object's current version was published (its most recent successful finalise).
+          description: When the RO-Crate's current version was published (its most recent successful finalise).
         access:
           type: object
-          description: Access information for this storage object. `metadata` governs this resource; `content` governs the deposited crate and file retrieval.
+          description: Access information for this RO-Crate. `metadata` governs this resource; `content` governs the deposited metadata document and file retrieval.
           required:
             - metadata
             - content
           properties:
             metadata:
               type: boolean
-              description: Whether this storage-object resource is accessible to the current user.
+              description: Whether this RO-Crate resource is accessible to the current user.
             content:
               type: boolean
-              description: Whether the deposited crate is accessible to the current user.
+              description: Whether the deposited metadata document is accessible to the current user.
             metadataAuthorizationUrl:
               type: string
               format: uri
@@ -2550,9 +2538,8 @@ components:
             content: true
     Tombstone:
       type: object
-      x-extension: deposit
       description: |
-        A record of a deletion, returned with `410 Gone` when the implementation's `tombstonePolicy` is `"410"`. Part of the `deposit` extension. One policy covers storage-object URIs (including `/crate`) and materialised entities alike.
+        A record of a deletion, returned with `410 Gone` when the implementation's `tombstonePolicy` is `"410"`. Part of the optional deposit surface. One policy covers RO-Crate URIs (including `/crate`) and materialised entities alike.
       required:
         - id
         - resourceType
@@ -2565,11 +2552,11 @@ components:
         resourceType:
           type: string
           enum:
-            - storage-object
+            - RO-Crate
             - entity
             - file
           description: The kind of resource that was deleted.
-          example: storage-object
+          example: RO-Crate
         deletedAt:
           type: string
           format: date-time
@@ -2578,14 +2565,13 @@ components:
           type: string
           description: An optional human-readable reason for the deletion.
           example: Withdrawn at the depositor's request
-        storageObjectId:
-          description: For entity and file tombstones, the storage object whose deletion led to this resource's removal, where known.
+        roCrateId:
+          description: For entity and file tombstones, the RO-Crate whose deletion led to this resource's removal, where known.
           $ref: "#/components/schemas/Id"
     FileStagingMetadata:
       type: object
-      x-extension: deposit
       description: |
-        Transport metadata staged for a file in presigned mode. Part of the `deposit` extension. Carries only what is needed to move and verify the bytes — descriptive metadata about the file lives in the deposited crate.
+        Transport metadata staged for a file in presigned mode. Part of the optional deposit surface. Carries only what is needed to move and verify the bytes — descriptive metadata about the file lives in the deposited metadata document.
       required:
         - size
       properties:
@@ -2607,8 +2593,7 @@ components:
           example: audio/x-wav
     FileUploadTarget:
       type: object
-      x-extension: deposit
-      description: Where to send a file's bytes after staging it in presigned mode. Part of the `deposit` extension. There is no per-file completion call — finalise verifies the upload.
+      description: Where to send a file's bytes after staging it in presigned mode. Part of the optional deposit surface. There is no per-file completion call — finalise verifies the upload.
       required:
         - uploadUrl
       properties:
@@ -2722,7 +2707,7 @@ components:
             message:
               type: string
               description: Human-readable error message
-              example: A storage object with this ID already exists
+              example: An RO-Crate with this ID already exists
             details:
               type: object
               description: Additional error details specific to the error type
@@ -2906,13 +2891,14 @@ components:
       summary: Example capabilities response
       value:
         apiVersion: "0.3.0"
+        deposit:
+          supported: true
+          idMinting: "both"
+          fileUpload: ["inline", "presigned"]
+          tombstonePolicy: "410"
+          depositTtlSeconds: 604800
         extensions:
           segments: {}
-          deposit:
-            idMinting: "both"
-            fileUpload: ["inline", "presigned"]
-            tombstonePolicy: "410"
-            depositTtlSeconds: 604800
         search:
           filters:
             inLanguage:
@@ -3179,7 +3165,7 @@ components:
       summary: Example deposit in the open state
       value:
         depositId: "dep_8f14e45f"
-        storageObjectId: "https://catalog.paradisec.org.au/repository/NT1/001"
+        roCrateId: "https://catalog.paradisec.org.au/repository/NT1/001"
         state: "open"
         createdAt: "2026-07-21T03:24:00Z"
         files:
@@ -3194,7 +3180,7 @@ components:
       summary: Example deposit finalising asynchronously
       value:
         depositId: "dep_8f14e45f"
-        storageObjectId: "https://catalog.paradisec.org.au/repository/NT1/001"
+        roCrateId: "https://catalog.paradisec.org.au/repository/NT1/001"
         state: "finalising"
         createdAt: "2026-07-21T03:24:00Z"
         files:
@@ -3209,7 +3195,7 @@ components:
       summary: Example completed deposit
       value:
         depositId: "dep_8f14e45f"
-        storageObjectId: "https://catalog.paradisec.org.au/repository/NT1/001"
+        roCrateId: "https://catalog.paradisec.org.au/repository/NT1/001"
         state: "complete"
         createdAt: "2026-07-21T03:24:00Z"
         files:
@@ -3220,8 +3206,8 @@ components:
             status: "received"
             size: 52428800
 
-    StorageObjectResponse:
-      summary: Example storage object response
+    RoCrateResponse:
+      summary: Example RO-Crate response
       value:
         id: "https://catalog.paradisec.org.au/repository/NT1/001"
         entityIds:
@@ -3234,11 +3220,11 @@ components:
           metadata: true
           content: true
 
-    StorageObjectsListResponse:
-      summary: Example storage objects list response
+    RoCratesListResponse:
+      summary: Example RO-Crates list response
       value:
         total: 2
-        storageObjects:
+        roCrates:
           - id: "https://catalog.paradisec.org.au/repository/NT1/001"
             entityIds:
               - "https://catalog.paradisec.org.au/repository/NT1/001"
@@ -3261,7 +3247,7 @@ components:
       summary: Example tombstone response
       value:
         id: "https://catalog.paradisec.org.au/repository/NT1/001"
-        resourceType: "storage-object"
+        resourceType: "RO-Crate"
         deletedAt: "2026-07-01T00:00:00Z"
         reason: "Withdrawn at the depositor's request"
 
@@ -3270,7 +3256,7 @@ components:
       value:
         error:
           code: "CONFLICT"
-          message: "A storage object with this ID already exists"
+          message: "An RO-Crate with this ID already exists"
           requestId: "550e8400-e29b-41d4-a716-446655440000"
 
     FileUploadTargetResponse:
@@ -3293,5 +3279,5 @@ components:
               - field: "NT1-001-001A.wav"
                 message: "staged file bytes not received"
               - field: "./"
-                message: "root dataset does not reference the storage object ID"
+                message: "root dataset does not reference the RO-Crate ID"
           requestId: "550e8400-e29b-41d4-a716-446655440000"
