@@ -7,9 +7,9 @@ mdx.format: md
 # Legacy Extensions (Pending Registration)
 
 The properties below predate the extension registry. The
-[oni-ui](https://github.com/Language-Research-Technology/oni-ui) implementation
-expects them at the root level of entity responses. They remain documented here
-until they are formally registered as extensions.
+[Oni](https://github.com/crate-works/oni) implementation expects them at the
+root level of entity responses. They remain documented here until they are
+formally registered as extensions.
 
 ## Statistical Counts
 
