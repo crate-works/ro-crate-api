@@ -24,9 +24,9 @@ and the specification adheres to
   `headEntityMetadata`, which renames the generated reference pages and the
   corresponding method names in generated client libraries.
 - The PARADISEC server entry now points at
-  <https://admin-catalog.paradisec.org.au/api/v1/oni>; the previous
-  `catalog.paradisec.org.au` host no longer serves the API. The base URL
-  example in the Overview guide was repointed to match.
+  <https://admin-catalog.paradisec.org.au/api/v1/oni>, replacing the
+  `catalog.paradisec.org.au` host. The base URL example in the Overview guide
+  was repointed to match.
 - The specification moved to the CrateWorks organisation. It is now published at
   <https://ro-crate-api.crate-works.org> from
   <https://github.com/crate-works/ro-crate-api>; the documentation links carried

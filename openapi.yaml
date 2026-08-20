@@ -320,7 +320,7 @@ paths:
       description: |
         Retrieve the entity's RO-Crate Metadata Document: the complete JSON-LD conforming to the RO-Crate specification. This is the metadata document itself, not the summary `Entity` object returned by `GET /entity/{id}`.
 
-        This endpoint works for any entity type (Collection, Object, or MediaObject) and returns the associated ro-crate-metadata.json content.
+        This endpoint works for any entity type: Collection, Object, or MediaObject.
 
         The returned document's provenance is implementation-defined: it may be a stored metadata document, or a view derived from the metadata documents of the entity's contributing RO-Crates. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve the original deposited metadata document verbatim, use `GET /ro-crate/{id}/metadata` (available where the implementation supports deposit).
       operationId: getEntityMetadata
