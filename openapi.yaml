@@ -507,7 +507,7 @@ paths:
                     {
                       "inLanguage": ["English", "Japanese"],
                       "mediaType": ["image/png"],
-                      "createdAt": { "gte": "2020-01-01", "lte": "2021-01-01" },
+                      "createdAt": { "gte": "2020-01-01", "lte": "2020-12-31" },
                     }
                 boundingBox:
                   type: object
@@ -2141,7 +2141,7 @@ components:
             - date
             - number
             - boolean
-          description: The filter's value type. `date` values are ISO 8601 strings. `boolean` values are the strings `"true"` and `"false"`.
+          description: The filter's value type. A `date` value is either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; a calendar date covers the whole of its day in UTC, in exact values as well as in range bounds — see `FilterRange` for the full resolution rule. `boolean` values are the strings `"true"` and `"false"`.
           example: date
         label:
           type: string
@@ -2149,7 +2149,14 @@ components:
           example: Date created
     FilterRange:
       type: object
-      description: An inclusive range constraint for a search filter. Valid only for filters declared with type `date` or `number` in `/capabilities`. At least one bound is required; values are ISO 8601 strings for `date` filters and numbers for `number` filters. A filter value may be a single range or a non-empty array of ranges; an array is matched as an OR of its ranges — an entity matches when any of the ranges matches.
+      description: |
+        An inclusive range constraint for a search filter. Valid only for filters declared with type `date` or `number` in `/capabilities`. At least one bound is required. A filter value may be a single range or a non-empty array of ranges; an array is matched as an OR of its ranges — an entity matches when any of the ranges matches.
+
+        A bound's JSON type MUST match the declared type of the filter it is applied to — a string for a `date` filter, a number for a `number` filter. A mismatched bound MUST be rejected with a 400 `ValidationError`.
+
+        A `date` bound is either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; any other form, including a partial date such as `2020` or `2020-12`, MUST be rejected with a 400 `ValidationError`. A calendar date covers the whole of its day in UTC: `gte` resolves to `00:00:00Z` on that date, and `lte` covers every instant strictly before `00:00:00Z` of the following date — at millisecond precision, `23:59:59.999Z` on that date. A date-time is used exactly as given; one carrying no timezone offset is interpreted as UTC. A whole calendar year is therefore `gte` `2020-01-01` with `lte` `2020-12-31`.
+
+        The same resolution governs a `date` filter's exact values: `"2020-12-31"` matches any instant within that UTC day, while `"2020-12-31T10:00:00Z"` matches that instant alone.
       minProperties: 1
       additionalProperties: false
       properties:
@@ -2164,7 +2171,7 @@ components:
             - type: string
             - type: number
           description: The inclusive upper bound.
-          example: "2021-01-01"
+          example: "2020-12-31"
     Segment:
       description: |
         A location inside a file where a full-text search match occurred, allowing clients to deep-link the user to the match. Part of the `segments` extension.
