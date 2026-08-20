@@ -2141,7 +2141,7 @@ components:
             - date
             - number
             - boolean
-          description: The filter's value type. A `date` value is either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; a calendar date covers the whole of its day in UTC, in exact values as well as in range bounds — see `FilterRange` for the full resolution rule. `boolean` values are the strings `"true"` and `"false"`.
+          description: The filter's value type. A `date` value is either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; see `FilterRange` for how each resolves, in exact values as well as in range bounds. `boolean` values are the strings `"true"` and `"false"`.
           example: date
         label:
           type: string

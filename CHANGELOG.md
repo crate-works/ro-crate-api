@@ -12,22 +12,20 @@ and the specification adheres to
 ### Changed
 
 - **Conformance-affecting.** A `date` search filter value is now defined as
-  either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time, and a
-  calendar date covers the whole of its day in UTC — a `gte` resolves to
-  `00:00:00Z` on that date, and an `lte` covers every instant strictly before
-  `00:00:00Z` of the following date. A date-time is used as given, and one
-  carrying no timezone offset is read as UTC. The same resolution applies to
-  exact values, so `"2020-12-31"` matches any instant within that UTC day
-  while `"2020-12-31T10:00:00Z"` matches that instant alone. Any other form,
-  including a partial date such as `2020`, is rejected with a 400
-  `ValidationError`. Previously the specification said only "ISO 8601
-  strings" and left the resolution undefined, so an implementation parsing a
-  date-only bound strictly could silently drop every entity stamped later
-  that day. Implementations resolving bounds strictly must change; those
-  already treating a date-only bound as a whole day need no change. Stated
-  alongside it: a range bound's JSON type MUST match the declared type of the
-  filter it is applied to, and a mismatch is rejected with a 400
-  `ValidationError`.
+  either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; any
+  other form, including a partial date such as `2020` or `2020-12`, is
+  rejected with a 400 `ValidationError`. A calendar date covers the whole of
+  its day in UTC — a `gte` resolves to `00:00:00Z` on that date, an `lte` to
+  every instant strictly before `00:00:00Z` of the following date — and the
+  same resolution applies to exact values, not only to range bounds. A
+  date-time is used as given, and one carrying no timezone offset is read as
+  UTC. Previously the specification said only "ISO 8601 strings" and left the
+  resolution undefined, so an implementation parsing a date-only bound
+  strictly would silently drop every entity stamped later that day; those
+  implementations must change.
+- A search filter range bound's JSON type MUST match the declared type of the
+  filter it is applied to — a string for a `date` filter, a number for a
+  `number` filter — and a mismatch is rejected with a 400 `ValidationError`.
 - The specification moved to the CrateWorks organisation. It is now published at
   <https://ro-crate-api.crate-works.org> from
   <https://github.com/crate-works/ro-crate-api>; the documentation links carried
@@ -37,12 +35,11 @@ and the specification adheres to
 
 ### Fixed
 
-- Three date range examples used a next-year upper bound (`gte` 2020-01-01,
-  `lte` 2021-01-01), which is 367 days — all of 2020 plus 1 January 2021 —
-  rather than the whole year the surrounding prose described. The `FilterRange`
-  bound examples, the inline `filters` example in the search request, and the
-  first range example in the capabilities guide now use a `2020-12-31` upper
-  bound, matching the year-end convention already used by the other examples.
+- Three date range examples used an `lte` of `2021-01-01` — all of 2020 plus
+  1 January 2021 — rather than the whole year the surrounding prose described.
+  The `FilterRange` bound examples, the inline `filters` example in the search
+  request, and the first range example in the capabilities guide now use
+  `2020-12-31`.
 
 ## [0.3.0] - 2026-07-21
 
