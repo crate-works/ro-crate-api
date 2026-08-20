@@ -45,7 +45,7 @@ info:
 servers:
   - url: https://data.ldaca.edu.au/api
     description: LDaCA
-  - url: https://catalog.paradisec.org.au/api/v1/oni
+  - url: https://admin-catalog.paradisec.org.au/api/v1/oni
     description: PARADISEC
 externalDocs:
   description: Find out more about RO-Crate
@@ -312,18 +312,18 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerErrorResponse"
 
-  /entity/{id}/rocrate:
+  /entity/{id}/metadata:
     get:
       tags:
         - entities
-      summary: Get RO-Crate metadata
+      summary: Get the entity's RO-Crate metadata document
       description: |
-        Retrieve the complete RO-Crate JSON-LD metadata for an entity. This returns the raw RO-Crate representation, which includes all metadata conforming to the RO-Crate specification.
+        Retrieve the entity's RO-Crate Metadata Document: the complete JSON-LD conforming to the RO-Crate specification. This is the metadata document itself, not the summary `Entity` object returned by `GET /entity/{id}`.
 
         This endpoint works for any entity type (Collection, Object, or MediaObject) and returns the associated ro-crate-metadata.json content.
 
         The returned document's provenance is implementation-defined: it may be a stored metadata document, or a view derived from the metadata documents of the entity's contributing RO-Crates. Either way it MUST be a valid RO-Crate whose root data entity describes this entity. To retrieve the original deposited metadata document verbatim, use `GET /ro-crate/{id}/metadata` (available where the implementation supports deposit).
-      operationId: getEntityCrate
+      operationId: getEntityMetadata
       parameters:
         - name: id
           in: path
@@ -394,10 +394,10 @@ paths:
     head:
       tags:
         - entities
-      summary: Get RO-Crate metadata headers
+      summary: Get entity RO-Crate metadata document headers
       description: |
         Retrieve RO-Crate metadata headers without downloading the metadata content. Returns the same headers as GET but with no response body, useful for checking metadata availability and caching information.
-      operationId: headEntityCrate
+      operationId: headEntityMetadata
       parameters:
         - name: id
           in: path
@@ -1618,7 +1618,7 @@ paths:
       description: |
         Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
-        Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/rocrate`, which may return a derived view, this endpoint always returns the original deposited metadata document.
+        Retrieve the RO-Crate's current RO-Crate metadata document, verbatim as deposited. Unlike `GET /entity/{id}/metadata`, which may return a derived view, this endpoint always returns the original deposited metadata document.
       operationId: getRoCrateMetadata
       parameters:
         - $ref: "#/components/parameters/RoCrateIdParameter"
