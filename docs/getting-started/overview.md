@@ -20,7 +20,7 @@ implementation.
 Each RO-Crate API implementation will have its own base URL. Examples:
 
 - LDaCA: `https://data.ldaca.edu.au/api`
-- PARADISEC: `https://catalog.paradisec.org.au/api/v1/oni`
+- PARADISEC: `https://admin-catalog.paradisec.org.au/api/v1/oni`
 
 ## Authentication
 
@@ -104,7 +104,7 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 Retrieve the raw RO-Crate JSON-LD metadata for any entity:
 
 ```bash
-curl https://data.ldaca.edu.au/api/entity/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FLRB%2F001/rocrate
+curl https://data.ldaca.edu.au/api/entity/https%3A%2F%2Fcatalog.paradisec.org.au%2Frepository%2FLRB%2F001/metadata
 ```
 
 This returns the complete RO-Crate metadata conforming to the RO-Crate specification.

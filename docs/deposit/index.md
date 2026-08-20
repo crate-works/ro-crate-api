@@ -86,7 +86,7 @@ bidirectionally linked:
   arrive in exactly one deposit. Optional, to accommodate files predating any
   RO-Crate.
 
-`GET /entity/{id}/rocrate` has implementation-defined provenance: the
+`GET /entity/{id}/metadata` has implementation-defined provenance: the
 document may be a stored metadata document, or a view derived from the
 metadata documents of the entity's contributing RO-Crates. Either way it
 MUST be a valid RO-Crate whose root data entity describes the entity. To

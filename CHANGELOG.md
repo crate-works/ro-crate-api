@@ -11,6 +11,22 @@ and the specification adheres to
 
 ### Changed
 
+- **Conformance-affecting.** `GET /entity/{id}/rocrate` and
+  `HEAD /entity/{id}/rocrate` are renamed to `GET /entity/{id}/metadata` and
+  `HEAD /entity/{id}/metadata`. The old paths are **removed outright**: there
+  is no alias and no deprecation period, so a client still calling `/rocrate`
+  receives a 404 from a conformant implementation. The endpoint returns an
+  RO-Crate Metadata Document rather than an RO-Crate package, so the previous
+  name was wrong on terminology as well as on spelling, and the new one
+  matches the `{resource}/{id}/metadata` shape already used by
+  `GET /ro-crate/{id}/metadata`. The operation identifiers change with it,
+  from `getEntityCrate` and `headEntityCrate` to `getEntityMetadata` and
+  `headEntityMetadata`, which renames the generated reference pages and the
+  corresponding method names in generated client libraries.
+- The PARADISEC server entry now points at
+  <https://admin-catalog.paradisec.org.au/api/v1/oni>, replacing the
+  `catalog.paradisec.org.au` host. The base URL example in the Overview guide
+  was repointed to match.
 - The specification moved to the CrateWorks organisation. It is now published at
   <https://ro-crate-api.crate-works.org> from
   <https://github.com/crate-works/ro-crate-api>; the documentation links carried
