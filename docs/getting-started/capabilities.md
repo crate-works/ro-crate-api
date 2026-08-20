@@ -120,10 +120,28 @@ accept an inclusive range object:
 {
   "filters": {
     "inLanguage": ["English"],
-    "createdAt": { "gte": "2020-01-01", "lte": "2021-01-01" }
+    "createdAt": { "gte": "2020-01-01", "lte": "2020-12-31" }
   }
 }
 ```
+
+A `date` value — a range bound or an exact value — is either a calendar date
+(`YYYY-MM-DD`) or a full RFC 3339 date-time. Anything else, including a partial
+date such as `2020` or `2020-12`, is rejected with a 400 `ValidationError`.
+A calendar date covers the whole of its day in UTC; a date-time is used exactly
+as given, and one carrying no timezone offset is read as UTC:
+
+| Value | Resolves to |
+| --- | --- |
+| `2020-01-01` as `gte` | `2020-01-01T00:00:00Z` |
+| `2020-12-31` as `lte` | every instant before `2021-01-01T00:00:00Z` — at millisecond precision, `2020-12-31T23:59:59.999Z` |
+| `2020-12-31` as an exact value | any instant within that UTC day |
+| `2020-12-31T10:00:00Z` anywhere | that instant alone |
+
+So the range above is the whole of 2020: a year picker sends the year's first
+and last dates, not the next year's first. Prefer ranges to exact values on
+`date` filters — an exact date value is a whole-day window in disguise, which
+is rarely what "exact" suggests.
 
 A `date` or `number` filter also accepts a non-empty array of range objects,
 matched as an OR of the ranges — an entity matches when any of the ranges
@@ -142,8 +160,9 @@ as two years in a date facet:
 ```
 
 Requests using a filter field the implementation did not declare — or sending
-a range to a `string` or `boolean` filter, or mixing exact values and range
-objects in one array — are rejected with a 400 `ValidationError`, so build
+a range to a `string` or `boolean` filter, mixing exact values and range
+objects in one array, or giving a bound whose JSON type does not match the
+filter's declared type — are rejected with a 400 `ValidationError`, so build
 filter UI from this map rather than hard-coding field lists. Hide filters
 whose `type` you do not recognise; new types are added by spec revision.
 
