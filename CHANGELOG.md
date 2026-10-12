@@ -1,173 +1,171 @@
 # Changelog
 
-All notable changes to the RO-Crate API specification are documented in this
-file.
+All notable changes to the RO-Crate API specification are in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and the specification adheres to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+The specification uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+A **Breaking** change stops an existing server or client from working until it
+changes. Each breaking change says what to do.
 
 ## [0.4.0] - 2026-10-12
 
 ### Changed
 
-- **Conformance-affecting.** `GET /entity/{id}/rocrate` and
-  `HEAD /entity/{id}/rocrate` are renamed to `GET /entity/{id}/metadata` and
-  `HEAD /entity/{id}/metadata`. The old paths are **removed outright**: there
-  is no alias and no deprecation period, so a client still calling `/rocrate`
-  receives a 404 from a conformant implementation. The endpoint returns an
-  RO-Crate Metadata Document rather than an RO-Crate package, so the previous
-  name was wrong on terminology as well as on spelling, and the new one
-  matches the `{resource}/{id}/metadata` shape already used by
-  `GET /ro-crate/{id}/metadata`. The operation identifiers change with it,
-  from `getEntityCrate` and `headEntityCrate` to `getEntityMetadata` and
-  `headEntityMetadata`, which renames the generated reference pages and the
-  corresponding method names in generated client libraries.
-- The PARADISEC server entry now points at
-  <https://admin-catalog.paradisec.org.au/api/v1/oni>, replacing the
-  `catalog.paradisec.org.au` host. The base URL example in the Overview guide
-  was repointed to match.
-- **Conformance-affecting.** A `date` search filter value is now defined as
-  either a calendar date (`YYYY-MM-DD`) or a full RFC 3339 date-time; any
-  other form, including a partial date such as `2020` or `2020-12`, is
-  rejected with a 400 `ValidationError`. A calendar date covers the whole of
-  its day in UTC — a `gte` resolves to `00:00:00Z` on that date, an `lte` to
-  every instant strictly before `00:00:00Z` of the following date — and the
-  same resolution applies to exact values, not only to range bounds. A
-  date-time is used as given, and one carrying no timezone offset is read as
-  UTC. Previously the specification said only "ISO 8601 strings" and left the
-  resolution undefined, so an implementation parsing a date-only bound
-  strictly would silently drop every entity stamped later that day; those
-  implementations must change.
-- A search filter range bound's JSON type MUST match the declared type of the
-  filter it is applied to — a string for a `date` filter, a number for a
-  `number` filter — and a mismatch is rejected with a 400 `ValidationError`.
-- The specification moved to the CrateWorks organisation. It is now published at
-  <https://ro-crate-api.crate-works.org> from
-  <https://github.com/crate-works/ro-crate-api>; the documentation links carried
-  in `openapi.yaml` were repointed to match. The previous
-  `language-research-technology.github.io/ro-crate-api` address is no longer
-  served and does not redirect.
+- **Breaking.** The route for an Entity's RO-Crate Metadata Document is now
+  `/entity/{id}/metadata`. It was `/entity/{id}/rocrate`. This applies to
+  `GET` and `HEAD`. The new name matches `/ro-crate/{id}/metadata`. The old
+  route is removed. It has no alias, and servers return 404 for it.
+  The operation IDs change from `getEntityCrate` and `headEntityCrate` to
+  `getEntityMetadata` and `headEntityMetadata`. This renames the methods in
+  generated client libraries.
+  _What to do:_ servers serve the new route. Clients call the new route.
+- **Breaking.** The specification now defines the values that a `date` search
+  filter accepts. A value is a date (`YYYY-MM-DD`) or a full RFC 3339
+  date-time. The server rejects other values, such as `2020` or `2020-12`,
+  with a 400 `ValidationError`.
+  A date means the full day in UTC. For example, `"lte": "2020-12-31"`
+  includes all of 31 December 2020. A date-time without a time zone is UTC.
+  These rules apply to ranges and to exact values.
+  Before, the specification said only "ISO 8601 strings". A server could read
+  `"lte": "2020-12-31"` as the start of that day, and drop the results from
+  later in the day.
+  _What to do:_ servers that already treat a date as the full UTC day need no
+  change. Other servers must change.
+- A range bound must have the same JSON type as its filter: a string for a
+  `date` filter, a number for a `number` filter. The server rejects a
+  mismatch with a 400 `ValidationError`.
+- The PARADISEC server URL is now
+  <https://admin-catalog.paradisec.org.au/api/v1/oni>. It was on
+  `catalog.paradisec.org.au`. The Overview guide uses the new URL.
+- The specification moved to the CrateWorks organisation. The site is now at
+  <https://ro-crate-api.crate-works.org>, and the repository is at
+  <https://github.com/crate-works/ro-crate-api>. The links in `openapi.yaml`
+  use the new addresses. The old address,
+  `language-research-technology.github.io/ro-crate-api`, does not work and
+  does not redirect.
 
 ### Fixed
 
-- Three date range examples used an `lte` of `2021-01-01` — all of 2020 plus
-  1 January 2021 — rather than the whole year the surrounding prose described.
-  The `FilterRange` bound examples, the inline `filters` example in the search
-  request, and the first range example in the capabilities guide now use
-  `2020-12-31`.
+- Three examples used `2021-01-01` as the end of 2020, so they also included
+  1 January 2021. They now use `2020-12-31`. The examples are in the
+  `FilterRange` schema, the search `filters` example, and the Capabilities
+  guide.
 
 ## [0.3.0] - 2026-08-19
 
 ### Added
 
-- Deposit: write access through deposit sessions
-  against RO-Crates — a metadata document plus all the files it references,
-  deposited and stored as a unit, from which the implementation materialises
-  catalog entities by its own rules. The RO-Crate is the sole write
-  pathway; entities remain read-only projections.
-- Deposit session endpoints: `POST /deposits` creates a deposit for a new
-  RO-Crate (client-proposed or server-minted ID per the `idMinting`
-  capability) and `POST /ro-crate/{id}/deposits` opens an update
-  deposit; staging via `PUT /deposit/{id}/metadata` (full replace) and
-  `PUT /deposit/{id}/file/{fileId}` (inline bytes or presigned upload,
-  discriminated by Content-Type), in any order; `POST /deposit/{id}/finalise`
-  validates and publishes atomically, synchronously (200) or asynchronously
-  (202 with polling via `GET /deposit/{id}`); `DELETE /deposit/{id}` aborts.
-  A failed finalise returns the deposit to `open` with the violations
-  recorded — staged content is never lost to a metadata typo.
-- Update deposits use metadata-as-manifest carry-forward: stage a new metadata document plus
-  only the changed files; unchanged files carry forward from the baseline by
-  `@id`, and files absent from the new metadata document drop out. The baseline is pinned
-  at deposit creation and each finalise replaces the RO-Crate
-  wholesale, so the last finalise wins as a unit.
-- The RO-Crate read surface: `GET /ro-crates` (list),
-  `GET /ro-crate/{id}` (lean body — `id`, `entityIds`, timestamps,
-  `access`) and `GET /ro-crate/{id}/metadata` (the deposited metadata
-  document, verbatim, with a HEAD twin). Bidirectional linkage between the catalog and
-  RO-Crates: a plural `roCrateIds` on entities, a singular
-  `roCrateId` on files, and `entityIds` on the RO-Crate.
-- Deletion: `DELETE /ro-crate/{id}` with no spec-mandated
-  preconditions (implementations MAY refuse with a 409 and a reason), and a
-  constrained `DELETE /entity/{id}` valid only for entities no RO-Crate
-  contributes to. Deleted URIs follow a single per-implementation
-  tombstone policy — `410` with a new `Tombstone` schema, or plain `404` —
-  covering RO-Crate, entity and file URIs alike.
-- A required top-level `tombstonePolicy` member in `/capabilities`, declaring
-  which of the two policies the implementation follows. Required of every
-  implementation, whether or not it provides the deposit surface: entities
-  and files are mandatory core, so any catalog may hold a URI that no longer
-  resolves. **Conformance-affecting**: existing implementations must add it.
-- A required top-level `deposit` block in `/capabilities`. Its `supported`
-  flag states whether the implementation provides the deposit surface;
-  where it does, `idMinting` and `fileUpload` accompany it, plus optional
-  `depositTtlSeconds` and `maxFileSizeBytes`. Deposit is
-  optional core: read-only implementations remain conformant by declaring
-  `"deposit": { "supported": false }`. Write operations require the new
-  coarse OAuth2 `write` scope.
+- Deposit: a way to write to the catalog. A client writes a complete
+  RO-Crate: the RO-Crate Metadata Document and all the files it references.
+  The server stores the RO-Crate as one unit, and makes Entities from it by
+  its own rules. Deposit is the only way to write. Entities stay read-only.
+- Deposit endpoints:
+  - `POST /deposits` starts a Deposit for a new RO-Crate. The client gives
+    the ID, or the server makes one. The `idMinting` capability says which.
+  - `POST /ro-crate/{id}/deposits` starts a Deposit that updates an existing
+    RO-Crate.
+  - `PUT /deposit/{id}/metadata` adds the RO-Crate Metadata Document. Each
+    call replaces the last one.
+  - `PUT /deposit/{id}/file/{fileId}` adds a file. The client sends the
+    bytes, or gets a presigned upload URL. The `Content-Type` header selects
+    which.
+  - The client can add the metadata and the files in any order.
+  - `POST /deposit/{id}/finalise` validates the Deposit and publishes it as
+    one unit. The server replies 200 when it is done, or 202 when it
+    continues in the background. After a 202, the client polls
+    `GET /deposit/{id}`.
+  - If finalise fails, the Deposit stays open and records the errors. The
+    server keeps the metadata and files, so the client can fix the problem
+    and try again.
+  - `DELETE /deposit/{id}` cancels a Deposit.
+- Updates. To update an RO-Crate, the client sends a new RO-Crate Metadata
+  Document and only the files that changed. The server keeps the other files
+  that the new document lists, matched by `@id`. It removes files that the
+  new document does not list. The server fixes the starting version when the
+  Deposit starts. Each finalise replaces the whole RO-Crate, so the last
+  finalise wins.
+- Read endpoints for RO-Crates:
+  - `GET /ro-crates` lists RO-Crates.
+  - `GET /ro-crate/{id}` returns a short summary: `id`, `entityIds`,
+    timestamps and `access`.
+  - `GET /ro-crate/{id}/metadata` and its `HEAD` twin return the RO-Crate
+    Metadata Document exactly as deposited.
+- Links between the catalog and RO-Crates: `roCrateIds` on Entities,
+  `roCrateId` on files, and `entityIds` on RO-Crates.
+- Deletes:
+  - `DELETE /ro-crate/{id}` deletes an RO-Crate. The specification sets no
+    conditions, but a server can refuse with a 409 and a reason.
+  - `DELETE /entity/{id}` deletes an Entity. It works only for an Entity that
+    no RO-Crate contributes to.
+  - A deleted RO-Crate, Entity or file URI returns `410` with a `Tombstone`
+    body, or `404`. Each server uses one of these for all deleted URIs.
+- **Breaking.** A required `tombstonePolicy` field in `/capabilities`. It says
+  if deleted URIs return `410` or `404`. Servers without Deposit need it too,
+  because any catalog can have URIs that no longer resolve.
+  _What to do:_ servers add `tombstonePolicy` to `/capabilities`.
+- **Breaking.** A required `deposit` field in `/capabilities`. Its `supported`
+  field says if the server supports Deposit. When it does, `idMinting` and
+  `fileUpload` are required, and `depositTtlSeconds` and `maxFileSizeBytes`
+  are optional.
+  _What to do:_ servers add `deposit` to `/capabilities`. A read-only server
+  sends `"deposit": { "supported": false }`.
+- A `write` OAuth2 scope. All write operations need it.
 
 ### Changed
 
-- `GET /entity/{id}/rocrate` is now specified as implementation-defined in
-  provenance: the document may be stored or derived from the entity's
-  contributing RO-Crates, but must always be a valid RO-Crate whose
-  root data entity describes the entity. An original deposited metadata document is
-  retrieved verbatim from `GET /ro-crate/{id}/metadata`.
+- `GET /entity/{id}/rocrate` can return a stored document or a generated one.
+  The server decides. The document must be a valid RO-Crate whose root data
+  entity describes the Entity. To get the document exactly as deposited, use
+  `GET /ro-crate/{id}/metadata`.
 
 ## [0.2.0] - 2026-07-20
 
 ### Added
 
-- A `date` or `number` search filter value may now also be a non-empty array
-  of `gte`/`lte` range objects, matched as an OR of the ranges — an entity
-  matches when any of the ranges matches. This lets a client express several
-  disjoint periods on one filter, such as a date facet where the user selects
-  multiple years. Arrays mixing exact terms and range objects are rejected
-  with a 400 `ValidationError`, as is any range syntax on a `string` or
-  `boolean` filter.
+- A `date` or `number` search filter can take an array of `gte`/`lte` ranges.
+  An Entity matches if it matches any of the ranges. For example, a client
+  can select several years on one date facet. The server rejects an array
+  that mixes exact values and ranges, and a range on a `string` or `boolean`
+  filter, with a 400 `ValidationError`.
 
 ## [0.1.0] - 2026-07-13
 
 ### Added
 
-- An extension framework: extensions are first-class citizens of the
-  specification, registered in the OpenAPI document with a stable identifier,
-  a schema, and semantics. Extension properties are tagged with an
-  `x-extension: <id>` annotation. Unregistered experiments use an `x-`
-  prefixed identifier.
-- A required `GET /capabilities` endpoint through which every conformant
-  implementation declares the spec version it targets (`apiVersion`), the
-  extensions it implements (`extensions`), and its search capabilities
-  (`search`). **Conformance-affecting**: existing implementations must add
-  this endpoint.
-- The `search` capability object declares the implementation's search
-  `filters` (each with a required `type` — `string`, `date`, `number`, or
-  `boolean` — and an optional `label`) and its search `facets`. Every facet
-  field must also be declared as a filter, so a facet value the user clicks
-  can always be applied as a filter.
-- Search request `filters` values may now be an inclusive `gte`/`lte` range
-  object as well as an array of exact values. Ranges are valid only for
-  filters declared with type `date` or `number`. Requests using an undeclared
-  filter field, or a range on a `string`/`boolean` filter, are rejected with
-  a 400 `ValidationError`.
-- The `segments` extension — the first registered extension. Adds an optional
-  `searchExtra.segments` array to search hits: structured drill-down locations
-  (PDF pages via `PageSegment`, time-aligned annotations such as ELAN via
-  `TimeAlignedAnnotationSegment`) for full-text matches inside files,
-  expressed as a discriminated union on `type`.
+- Extensions. A registered extension has a stable ID, a schema and defined
+  behaviour in the OpenAPI document. Its properties have an
+  `x-extension: <id>` annotation. An unregistered, experimental extension
+  uses an ID that starts with `x-`.
+- **Breaking.** A required `GET /capabilities` endpoint. It says which version
+  of the specification the server implements (`apiVersion`), which extensions
+  it supports (`extensions`), and what search it supports (`search`).
+  _What to do:_ servers add this endpoint.
+- The `search` capability lists the server's search `filters` and `facets`.
+  Each filter has a `type` (`string`, `date`, `number` or `boolean`) and an
+  optional `label`. Each facet must also be a filter, so a client can always
+  apply a facet value as a filter.
+- A search filter can take a `gte`/`lte` range, as well as an array of exact
+  values. Only `date` and `number` filters accept ranges. The server rejects
+  a filter that it did not declare, and a range on a `string` or `boolean`
+  filter, with a 400 `ValidationError`.
+- The `segments` extension, the first registered extension. It adds an
+  optional `searchExtra.segments` array to search results. Each segment
+  points to a full-text match in a file: a PDF page (`PageSegment`) or a
+  time-aligned annotation such as ELAN (`TimeAlignedAnnotationSegment`). The
+  `type` field identifies the kind of segment.
 - This changelog.
 
 ### Changed
 
-- The Extensions guide moved to a dedicated top-level docs section with a
-  page per extension: the extension model and registry on the index page, a
-  detailed `segments` page (including non-normative Elasticsearch
-  implementation notes), and the legacy Oni-UI properties on their own page
-  pending registration.
+- Extensions have their own section in the docs, with one page for each
+  extension. The index page explains extensions and the registry. The
+  `segments` page has optional notes about Elasticsearch. The legacy Oni-UI
+  properties have their own page until they are registered.
 
 ## [0.0.1] - 2024-12-20
 
 ### Added
 
-- Initial specification: entities, files, and search endpoints with
-  authentication, rate limiting, and error handling conventions.
+- The first version of the specification: Entities, files and search, with
+  authentication, rate limiting and errors.
