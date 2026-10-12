@@ -14,7 +14,7 @@ it instead of relying on per-archive configuration or probing responses.
 
 ```json
 {
-  "apiVersion": "0.3.0",
+  "apiVersion": "0.4.0",
   "deposit": {
     "supported": true,
     "idMinting": "both",

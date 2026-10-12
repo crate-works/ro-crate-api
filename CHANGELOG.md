@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the specification adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-10-12
 
 ### Changed
 
@@ -57,7 +57,7 @@ and the specification adheres to
   request, and the first range example in the capabilities guide now use
   `2020-12-31`.
 
-## [0.3.0] - 2026-07-21
+## [0.3.0] - 2026-08-19
 
 ### Added
 
