@@ -41,7 +41,7 @@ info:
   license:
     name: MIT
     identifier: MIT
-  version: 0.3.0
+  version: 0.4.0
 servers:
   - url: https://data.ldaca.edu.au/api
     description: LDaCA
@@ -2002,7 +2002,7 @@ components:
         apiVersion:
           type: string
           description: The version of this specification that the implementation targets.
-          example: "0.3.0"
+          example: "0.4.0"
         extensions:
           type: object
           description: |
@@ -2902,7 +2902,7 @@ components:
     CapabilitiesResponse:
       summary: Example capabilities response
       value:
-        apiVersion: "0.3.0"
+        apiVersion: "0.4.0"
         deposit:
           supported: true
           idMinting: "both"

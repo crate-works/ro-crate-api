@@ -103,7 +103,7 @@ stands:
 
 ```json
 {
-  "apiVersion": "0.3.0",
+  "apiVersion": "0.4.0",
   "deposit": {
     "supported": true,
     "idMinting": "both",
@@ -118,7 +118,7 @@ A read-only catalog declares the block just as plainly:
 
 ```json
 {
-  "apiVersion": "0.3.0",
+  "apiVersion": "0.4.0",
   "deposit": { "supported": false }
 }
 ```
