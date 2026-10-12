@@ -18,7 +18,7 @@ Single-context: one `CONTEXT.md` at the repo root and ADRs in `docs/adr/` (both 
 
 ### Releasing
 
-Version bump, changelog heading, and a signed `vX.Y.Z` tag on `main`. See `docs/agents/releasing.md`.
+Version bump, changelog heading, blog post, and a signed `vX.Y.Z` tag on `main`. See `docs/agents/releasing.md`.
 
 ### Naming
 
