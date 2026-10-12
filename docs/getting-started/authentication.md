@@ -13,7 +13,9 @@ integrations.
 
 ### 1. No Authentication (Public Access)
 
-Many RO-Crate API endpoints are publicly accessible for read-only operations:
+Authentication is optional for the read endpoints. An archive may serve some
+reads publicly and protect others, or serve every read publicly and implement
+no authentication at all:
 
 ```bash
 # Public access - no authentication required
@@ -105,14 +107,16 @@ OAuth2 provides secure authentication for user-facing applications:
 
 Two coarse scopes are defined:
 
-- **`read`** — the read surface: entities, files, search, and
-  `/capabilities`.
+- **`read`** — the read surface: entities, files, and search.
 - **`write`** — the [deposit](/docs/deposit) and RO-Crate endpoints. Only
   meaningful where the implementation declares `deposit.supported` as `true`.
 
 Finer-grained authorisation — which collections a user may read, who may
 deposit what — is implementation-defined and expressed through ordinary `403`
 responses. Request the least privilege your client needs.
+
+`/capabilities` needs no scope. It is always public, so a client can read it
+before the user signs in.
 
 #### Step 1: Authorization Request
 

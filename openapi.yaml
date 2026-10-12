@@ -14,7 +14,7 @@ info:
 
     It is expected that most archives will allow public access but there will typically be entities which are private or require authorization.
 
-    When authentication is required, an API implementation MUST implement OAuth2 and it is recommended that OpenID is also added for simpler configuration and discoverability.
+    Authentication is optional for the read endpoints. An implementation MAY serve them all without authentication, in which case it need not implement any security scheme. When authentication is required, an API implementation MUST implement OAuth2 and it is recommended that OpenID is also added for simpler configuration and discoverability.
 
     Write operations — the deposit and RO-Crate endpoints — require the coarse OAuth2 `write` scope. Finer-grained authorisation policy (who may deposit what) is implementation-defined.
 
@@ -87,6 +87,7 @@ x-tagGroups:
     tags:
       - entity_model
 security:
+  - {}
   - ApiKey: []
   - OAuth2:
       - read
@@ -101,8 +102,11 @@ paths:
       description: |
         Declare what this implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides. Every conformant implementation MUST provide this endpoint so that clients can feature-detect rather than relying on per-archive configuration or probing.
 
+        This endpoint MUST NOT require authentication, so that clients can read it before they sign in. The response MUST NOT vary by caller: it describes the deployment, not what a given user may do. If a request carries credentials, the implementation SHOULD ignore them rather than reject them.
+
         See the [Capabilities guide](https://ro-crate-api.crate-works.org/docs/getting-started/capabilities) for how clients should use this endpoint, and the [Extensions guide](https://ro-crate-api.crate-works.org/docs/extensions) for how extensions are registered.
       operationId: getCapabilities
+      security: []
       responses:
         "200":
           description: OK
@@ -113,10 +117,6 @@ paths:
               examples:
                 CapabilitiesResponse:
                   $ref: "#/components/examples/CapabilitiesResponse"
-        "401":
-          $ref: "#/components/responses/UnauthorizedResponse"
-        "403":
-          $ref: "#/components/responses/ForbiddenResponse"
         "429":
           $ref: "#/components/responses/RateLimitResponse"
         "500":

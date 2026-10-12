@@ -8,6 +8,20 @@ The specification uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 A **Breaking** change stops an existing server or client from working until it
 changes. Each breaking change says what to do.
 
+## [Unreleased]
+
+### Fixed
+
+- `GET /capabilities` is now public in `openapi.yaml`. It has no security
+  requirement and no `401` or `403` responses. Before, it inherited the global
+  security requirement, and the Authentication guide listed it under the
+  `read` scope. The specification now says that the endpoint must not require
+  authentication, and that its response must be the same for every caller.
+- The read endpoints now allow anonymous access in `openapi.yaml`. Before,
+  the global security requirement had no anonymous option, so every read
+  formally needed authentication, although the guides showed public access.
+  An archive can serve every read publicly and implement no security scheme.
+
 ## [0.4.0] - 2026-10-12
 
 ### Changed
