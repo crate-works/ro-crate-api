@@ -14,7 +14,7 @@ info:
 
     It is expected that most archives will allow public access but there will typically be entities which are private or require authorization.
 
-    When authentication is required, an API implementation MUST implement OAuth2 and it is recommended that OpenID is also added for simpler configuration and discoverability.
+    Authentication is optional for the read endpoints. An implementation MAY serve them all without authentication, in which case it need not implement any security scheme. When authentication is required, an API implementation MUST implement OAuth2 and it is recommended that OpenID is also added for simpler configuration and discoverability.
 
     Write operations — the deposit and RO-Crate endpoints — require the coarse OAuth2 `write` scope. Finer-grained authorisation policy (who may deposit what) is implementation-defined.
 
@@ -87,6 +87,7 @@ x-tagGroups:
     tags:
       - entity_model
 security:
+  - {}
   - ApiKey: []
   - OAuth2:
       - read

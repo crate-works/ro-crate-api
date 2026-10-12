@@ -13,7 +13,9 @@ integrations.
 
 ### 1. No Authentication (Public Access)
 
-Many RO-Crate API endpoints are publicly accessible for read-only operations:
+Authentication is optional for the read endpoints. An archive may serve some
+reads publicly and protect others, or serve every read publicly and implement
+no authentication at all:
 
 ```bash
 # Public access - no authentication required
