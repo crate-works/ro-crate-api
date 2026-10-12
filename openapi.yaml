@@ -101,8 +101,11 @@ paths:
       description: |
         Declare what this implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides. Every conformant implementation MUST provide this endpoint so that clients can feature-detect rather than relying on per-archive configuration or probing.
 
+        This endpoint MUST NOT require authentication, so that clients can read it before they sign in. The response MUST NOT vary by caller: it describes the deployment, not what a given user may do. If a request carries credentials, the implementation SHOULD ignore them rather than reject them.
+
         See the [Capabilities guide](https://ro-crate-api.crate-works.org/docs/getting-started/capabilities) for how clients should use this endpoint, and the [Extensions guide](https://ro-crate-api.crate-works.org/docs/extensions) for how extensions are registered.
       operationId: getCapabilities
+      security: []
       responses:
         "200":
           description: OK
@@ -113,10 +116,6 @@ paths:
               examples:
                 CapabilitiesResponse:
                   $ref: "#/components/examples/CapabilitiesResponse"
-        "401":
-          $ref: "#/components/responses/UnauthorizedResponse"
-        "403":
-          $ref: "#/components/responses/ForbiddenResponse"
         "429":
           $ref: "#/components/responses/RateLimitResponse"
         "500":

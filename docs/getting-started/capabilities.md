@@ -176,7 +176,9 @@ applied as a filter on the next request.
 
 ## Using Capabilities
 
-Fetch `/capabilities` once when your client starts a session with an archive
-and cache the result — it describes the deployment, not individual requests.
+`/capabilities` never requires authentication, and its response is the same
+for every caller. Fetch it once when your client first connects to an archive,
+before the user signs in, and cache the result — it describes the deployment,
+not individual requests.
 Degrade gracefully when a capability is absent: hide the feature rather than
 failing.
