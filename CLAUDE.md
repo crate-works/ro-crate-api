@@ -14,7 +14,7 @@ The five canonical triage roles use their default names (`needs-triage`, `needs-
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` at the repo root and ADRs in `docs/adr/` (both excluded from the Docusaurus build). See `docs/agents/domain.md`.
+Single-context: one `GLOSSARY.md` at the repo root and ADRs in `docs/adr/` (both excluded from the Docusaurus build). See `docs/agents/domain.md`.
 
 ### Releasing
 

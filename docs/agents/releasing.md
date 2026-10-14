@@ -13,7 +13,7 @@ patch version.
 ## Writing changelog entries and blog posts
 
 Write for implementers who do not know the history. Use short sentences, the
-active voice, and the terms in `CONTEXT.md`.
+active voice, and the terms in `GLOSSARY.md`.
 
 Mark a change **Breaking** when an existing server or client stops working
 until it changes, and end the entry with `_What to do:_` and the change they

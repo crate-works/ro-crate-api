@@ -1,6 +1,6 @@
 # Naming
 
-What the terms mean is in `CONTEXT.md`. This is how they are spelled and how
+What the terms mean is in `GLOSSARY.md`. This is how they are spelled and how
 operations are named in `openapi.yaml`.
 
 ## The four renderings of "RO-Crate"
