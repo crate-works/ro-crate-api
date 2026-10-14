@@ -12,7 +12,7 @@ is accessible and redirect to enrollment URLs when access is restricted.
 
 ## Access Property Structure
 
-The API uses an `access` property to communicate access permissions. The structure differs between **Entities** and **Files**:
+The API uses an `access` property to communicate access permissions. The structure differs between **Entities**, **Files** and **RO-Crates**:
 
 ### Entity Access Structure
 
@@ -54,6 +54,25 @@ Files (accessed via `/files` endpoints) only include content access controls, as
 
 **Optional Fields:**
 - **`contentAuthorizationUrl`** (string): URL where users can request access to content when `content` is `false`
+
+### RO-Crate Access Structure
+
+RO-Crates (accessed via `/ro-crate` endpoints, where the implementation supports
+deposit) use the same fields as Entities, but `content` means something
+different:
+
+- **`metadata`** (boolean): Whether the current user has access to the RO-Crate
+  itself (`GET /ro-crate/{id}`)
+- **`content`** (boolean): Whether the current user has access to the deposited
+  RO-Crate Metadata Document (`GET /ro-crate/{id}/metadata`)
+
+An RO-Crate's `content` does not govern files. Each File's own `access`
+governs its retrieval.
+
+One RO-Crate can materialise many entities, and its RO-Crate Metadata Document
+holds the metadata of all of them. Implementations SHOULD set `content` to
+`true` only if the current user has `metadata` access to every entity
+materialised from the RO-Crate.
 
 **Note:** All examples in the sections below demonstrate Entity access patterns. For Files, only the content-related fields apply
 

@@ -152,8 +152,8 @@ Whether RO-Crates are readable beyond their depositor is
 and apply it consistently:
 
 - **Public surface**: RO-Crates are listable and retrievable by anyone, with
-  the `access` object governing metadata-document retrieval. Recommended
-  derivation: grant metadata access only if the caller has metadata access
+  `access.content` governing metadata-document retrieval. Recommended
+  derivation: grant `content` access only if the caller has `metadata` access
   to *every* entity materialised from the RO-Crate, since the deposited
   metadata document is the union of their metadata.
 - **Depositor-only surface**: RO-Crate reads require the `write` scope — a

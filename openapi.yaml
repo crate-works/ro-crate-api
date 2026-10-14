@@ -1460,7 +1460,7 @@ paths:
       description: |
         Optional core — provided when `deposit.supported` is `true`. See the [Deposits guide](https://ro-crate-api.crate-works.org/docs/deposit).
 
-        List RO-Crates, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether RO-Crates are a public surface (listable by anyone, with per-object `access` governing metadata-document retrieval) or a depositor-only management surface (requiring the `write` scope).
+        List RO-Crates, paginated and sorted. The response contains whatever the caller is allowed to see under the implementation's visibility model: implementations choose whether RO-Crates are a public surface (listable by anyone, with per-RO-Crate `access.content` governing metadata-document retrieval) or a depositor-only management surface (requiring the `write` scope).
 
         There are no content filters — catalog-side questions belong to `/entities` and `/search`.
       operationId: listRoCrates
@@ -2526,7 +2526,7 @@ components:
           description: When the RO-Crate's current version was published (its most recent successful finalise).
         access:
           type: object
-          description: Access information for this RO-Crate. `metadata` governs this resource; `content` governs the deposited metadata document and file retrieval.
+          description: Access information for this RO-Crate. `metadata` governs `GET /ro-crate/{id}`; `content` governs the deposited metadata document (`GET /ro-crate/{id}/metadata`). Files are governed by each File's own `access`.
           required:
             - metadata
             - content
@@ -2536,7 +2536,7 @@ components:
               description: Whether this RO-Crate resource is accessible to the current user.
             content:
               type: boolean
-              description: Whether the deposited metadata document is accessible to the current user.
+              description: Whether the deposited metadata document is accessible to the current user. The document holds the metadata of every entity materialised from the RO-Crate, so this SHOULD be `true` only if the current user has `metadata` access to all of them.
             metadataAuthorizationUrl:
               type: string
               format: uri

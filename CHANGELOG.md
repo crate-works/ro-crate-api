@@ -21,6 +21,12 @@ changes. Each breaking change says what to do.
   the global security requirement had no anonymous option, so every read
   formally needed authentication, although the guides showed public access.
   An archive can serve every read publicly and implement no security scheme.
+- The RO-Crate `access` flags now have one meaning each. `content` governs
+  only the deposited RO-Crate Metadata Document. Before, the schema said that
+  it also governed file retrieval, which conflicted with each File's own
+  `access`. The Deposits guide recommended that `metadata` access control
+  the document, which conflicted with the schema. It now recommends
+  `content`. The Authorization guide has a new section for RO-Crate access.
 
 ## [0.4.0] - 2026-10-12
 
