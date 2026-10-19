@@ -31,3 +31,19 @@ _Avoid_: record, item, resource
 **Deposit**:
 A session through which an RO-Crate is written. The sole write pathway.
 _Avoid_: upload, submission, ingest
+
+**Search Type**:
+How a search query is read: `basic` (free text) or `advanced` (the query
+grammar). Every implementation supports `basic`.
+_Avoid_: search mode, query type
+
+**Filter**:
+A field a search request can restrict results by, declared with a type
+(`string`, `date`, `number` or `boolean`).
+_Avoid_: facet (a different thing), constraint
+
+**Facet**:
+A Filter that also reports counts of matching Entities for each of its values
+in search responses. Only `string`, `boolean` and `date` Filters can be
+Facets.
+_Avoid_: aggregation, bucket field

@@ -39,8 +39,8 @@ engines.
 ### 🔍 **Powerful Search**
 
 - Full-text search across metadata
-- Advanced boolean queries
-- Geographic search with bounding boxes
+- Advanced boolean queries, where the archive supports them
+- Geographic search with bounding boxes, where the archive supports it
 - Faceted search with filters
 - Language and communication mode filtering
 
@@ -95,8 +95,8 @@ The RO-Crate API is already in use by several major research data repositories:
 ### Advanced Search
 
 - Free-text search across all metadata
-- Boolean query support for complex searches
-- Geographic search within bounding boxes
+- Optional boolean query support for complex searches
+- Optional geographic search within bounding boxes
 - Faceted search with dynamic filters
 - Communication mode and language filtering
 

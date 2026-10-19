@@ -10,8 +10,101 @@ changes. Each breaking change says what to do.
 
 ## [Unreleased]
 
+### Added
+
+- `search.maxResultWindow` in `/capabilities`. It is optional. It gives the
+  largest `offset + limit` that `POST /search` serves, and the server rejects
+  a request past it with a 400 `ValidationError`. Absent means no limit.
+- An optional `position` on each `ValidationError` violation. For an error in
+  a search query, it is the 0-based offset, in Unicode code points, where the
+  error was found.
+
+### Changed
+
+- **Breaking.** `/capabilities` has a required `search.searchTypes` map.
+  `basic` is always present, and `advanced` is optional. `advanced.fields`
+  lists the fields that an advanced query can name. The server rejects an
+  undeclared `searchType` with a 400 `ValidationError`, and an advanced query
+  that names an undeclared field with a 422.
+  _What to do:_ servers declare `searchTypes`, and reject the rest. Clients
+  hide advanced search when `advanced` is absent, and build the advanced
+  search form from `advanced.fields`.
+- **Breaking.** `/capabilities` has a required `search.geo` block with a
+  `supported` flag. When it is `false`, the server rejects `boundingBox` and
+  `geohashPrecision` with a 400 `ValidationError`.
+  _What to do:_ servers declare `geo`. Clients hide the map when
+  `supported` is `false`.
+- **Breaking.** `/capabilities` has a required top-level `sorts` map. It
+  lists the sorts for `POST /search` and `GET /entities`, and it always
+  includes `id`. On both endpoints, `sort` is now any string, not a fixed
+  list. The server rejects an undeclared sort with a 400 `ValidationError`.
+  `relevance` is always valid on `/search`, and never on `/entities`.
+  _What to do:_ servers declare the sorts they support, and reject the rest.
+  Clients build sort menus from `sorts`.
+- **Breaking.** Every sort must give the same order on every page of the same
+  request. The server chooses how to break ties.
+  _What to do:_ servers that sort on a field with duplicate values add a
+  tie-breaker, such as `id`.
+- **Breaking.** `sort: relevance` is now the server's best-match order. It
+  need not follow `searchExtra.score`. Scores can be compared only within one
+  response.
+  _What to do:_ clients do not compare scores between responses.
+- **Breaking.** The search `total` must be exact.
+  _What to do:_ servers that report an estimate or a lower bound count
+  exactly. On OpenSearch, set `track_total_hits: true`.
+- **Breaking.** The specification now defines the advanced query grammar. It
+  has fielded terms, quoted phrases, `AND`, `OR`, unary `NOT`, brackets and
+  field groups such as `name: (a OR b)`. Operators are uppercase only.
+  Wildcards and other engine syntax are literal text. The server rejects a
+  query that does not parse with a 422 `ValidationError`. Before, the grammar
+  was defined only by example, and servers could add their own syntax.
+  _What to do:_ servers parse the grammar and reject queries that don't
+  parse, then translate the parsed query for their backend, so engine syntax
+  such as `*` in a value stays literal. Clients send only the grammar.
+- **Breaking.** The specification now defines word matching for both search
+  types. Every word must match, in any order, ignoring case. In basic search
+  this applies to the whole query. In advanced search it applies to each
+  value, and `AND`, `OR` and `NOT` combine the results. Quoted text is a
+  phrase. Basic search has no operators. Servers may also
+  stem words, fold diacritics and ignore stop words.
+  _What to do:_ servers that match any word, or that read operators in basic
+  search, change to these rules.
+- **Breaking.** An empty query (`""` or only whitespace) matches every
+  Entity that the caller can see, for both search types.
+  _What to do:_ clients that send `"*"` to match everything send `""`.
+  Servers return every visible Entity for an empty query.
+- **Breaking.** When the server declares facets, every search response
+  includes `facets`, with every declared key. A facet with no matches has an
+  empty array. A server with no facets declares `{}` and may omit `facets`.
+  Only `string`, `boolean` and `date` filters can be facets.
+  _What to do:_ servers return every declared facet.
+- **Breaking.** A `date` facet has one bucket per UTC year with matches. The
+  bucket `name` is the four-digit year, such as `"2001"`, and the buckets are
+  in year order, oldest first. Buckets for `string` and `boolean` facets are
+  in count order, highest first, with ties in name order. To filter on a year,
+  the client sends a range, such as `{ "gte": "2001-01-01", "lte":
+  "2001-12-31" }`.
+  _What to do:_ servers that return other bucket keys, such as epoch
+  milliseconds, return years. Clients send year ranges, not the year as an
+  exact value.
+- **Breaking.** `geohashPrecision` needs a `boundingBox`. The server rejects
+  `geohashPrecision` without one with a 400 `ValidationError`.
+  _What to do:_ clients send both together.
+- **Breaking.** A `boundingBox` with `bottomLeft.lng` greater than
+  `topRight.lng` now crosses the antimeridian. Servers that support geo must
+  accept it. A box with `bottomLeft.lat` greater than `topRight.lat` is a 400
+  `ValidationError`.
+  _What to do:_ servers that treat such a box as empty or invalid search the
+  two longitude ranges on each side of 180°.
+
 ### Fixed
 
+- The Error Handling guide's 422 example used the code
+  `INVALID_QUERY_SYNTAX`, which `ValidationError` does not allow. It now uses
+  `VALIDATION_ERROR`, with the error in `details.violations`.
+- The Capabilities guide said that every declared facet appears in the search
+  response, but the response schema made `facets` optional. The search
+  response description now states when `facets` must be present.
 - `GET /capabilities` is now public in `openapi.yaml`. It has no security
   requirement and no `401` or `403` responses. Before, it inherited the global
   security requirement, and the Authentication guide listed it under the

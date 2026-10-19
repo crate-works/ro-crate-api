@@ -47,6 +47,9 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 
 ### Advanced Boolean Search
 
+Advanced search is optional: check that `/capabilities` lists `advanced` under
+`search.searchTypes`, and name only the fields it declares.
+
 ```bash
 curl -X POST https://data.ldaca.edu.au/api/search \
   -H "Content-Type: application/json" \
@@ -74,13 +77,15 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 
 ### Geographic Search
 
-Find resources within a specific geographic area:
+Find resources within a specific geographic area. Geo search is optional:
+check that `/capabilities` declares `search.geo.supported` as `true`. An empty
+query matches every Entity, so the box alone selects the results:
 
 ```bash
 curl -X POST https://data.ldaca.edu.au/api/search \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "*",
+    "query": "",
     "boundingBox": {
       "topRight": {
         "lat": -33.7,
@@ -250,7 +255,7 @@ Language archives often categorise data by communication mode:
 curl -X POST https://data.ldaca.edu.au/api/search \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "*",
+    "query": "",
     "filters": {
       "communicationMode": ["SpokenLanguage"]
     }
@@ -263,7 +268,7 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 curl -X POST https://data.ldaca.edu.au/api/search \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "*",
+    "query": "",
     "filters": {
       "communicationMode": ["SignedLanguage"]
     }
@@ -321,7 +326,7 @@ curl -X POST https://data.ldaca.edu.au/api/search \
 
 1. **Use appropriate page sizes**: 50-100 entities per request
 2. **Implement caching**: Cache frequently accessed entities
-3. **Sort consistently**: Use `sort` parameter for predictable pagination
+3. **Sort from capabilities**: Use a `sort` declared in `/capabilities`; every sort keeps the same order across pages
 4. **Respect rate limits**: Add delays between requests
 5. **Use specific filters**: Reduce result sets with targeted filters
 6. **Batch operations**: Group related requests together

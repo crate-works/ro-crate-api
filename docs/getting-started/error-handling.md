@@ -51,12 +51,12 @@ All error responses follow a consistent JSON structure:
 
 | Code | Description | When it occurs |
 |------|-------------|----------------|
-| **400 Bad Request** | Invalid request parameters | Malformed requests, invalid filters |
+| **400 Bad Request** | Invalid request parameters | Malformed requests, invalid filters, undeclared search types, sorts or geo, offsets past the result window |
 | **401 Unauthorized** | Authentication required | Missing or invalid credentials |
 | **403 Forbidden** | Access denied | Insufficient permissions |
 | **404 Not Found** | Resource not found | Invalid entity ID, file not found |
 | **416 Range Not Satisfiable** | Invalid range request | Bad Range header for file downloads |
-| **422 Unprocessable Entity** | Invalid query syntax | Malformed search queries |
+| **422 Unprocessable Entity** | Invalid query syntax | Advanced queries that do not parse or name undeclared fields |
 | **429 Too Many Requests** | Rate limit exceeded | Too many requests in time window |
 
 ### 5xx Server Errors
@@ -101,6 +101,11 @@ All error responses follow a consistent JSON structure:
 - Malformed entity IDs
 - Invalid filter parameters
 - Missing required fields
+- A `searchType`, `sort` or filter the implementation does not declare in
+  `/capabilities`
+- `boundingBox` or `geohashPrecision` when geo is not supported, or
+  `geohashPrecision` without `boundingBox`
+- `offset + limit` past the declared `search.maxResultWindow`
 
 ### 2. Authentication Errors (401)
 
@@ -194,19 +199,29 @@ Retry-After: 60
 
 ### 6. Search Query Errors (422)
 
-**Scenario**: Invalid search syntax
+**Scenario**: An advanced query that does not parse, or that names a field
+the implementation does not declare
 
 ```json
 {
   "error": {
-    "code": "INVALID_QUERY_SYNTAX",
-    "message": "Search query syntax is invalid",
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid query at position 28: expected a field value or opening bracket",
     "details": {
-      "query": "name: John AND (description:",
-      "position": 25,
-      "expected": "closing parenthesis or field value"
+      "violations": [
+        {
+          "field": "query",
+          "message": "expected a field value or opening bracket",
+          "value": "name: John AND (description:",
+          "position": 28
+        }
+      ]
     },
     "requestId": "550e8400-e29b-41d4-a716-446655440005"
   }
 }
 ```
+
+The `message` says what was expected. `position` is optional: when present,
+it is the 0-based offset, in Unicode code points, where the error was found,
+so a client can highlight that part of the query.

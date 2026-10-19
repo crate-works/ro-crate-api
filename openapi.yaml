@@ -32,6 +32,10 @@ info:
 
     Every implementation declares where it stands: the `deposit` block in `GET /capabilities` is always present, and its required `supported` flag states plainly whether the deposit surface is available.
 
+    ## Search
+
+    Basic search, filters and sorting are core. Advanced search, geo and facets are optional. Every implementation declares in `GET /capabilities` which search types, geo support, sorts, filters and facets it provides, and rejects a request that uses anything it did not declare. A query means the same thing on every implementation that accepts it.
+
   contact:
     name: Issues
     url: https://github.com/crate-works/ro-crate-api/issues
@@ -52,7 +56,7 @@ externalDocs:
   url: https://ro-crate-api.crate-works.org
 tags:
   - name: capabilities
-    description: Endpoint for discovering what an implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides.
+    description: Endpoint for discovering what an implementation supports — the spec version it targets, the extensions it implements, the sorts it offers, and the search features it provides.
     x-displayName: Capabilities
   - name: entities
     description: Endpoints related to the creation, retrieval, and management of RO-Crate entities.
@@ -100,7 +104,7 @@ paths:
         - capabilities
       summary: Get implementation capabilities
       description: |
-        Declare what this implementation supports — the spec version it targets, the extensions it implements, and the search filters and facets it provides. Every conformant implementation MUST provide this endpoint so that clients can feature-detect rather than relying on per-archive configuration or probing.
+        Declare what this implementation supports — the spec version it targets, the extensions it implements, the sorts it offers, and the search features it provides. Every conformant implementation MUST provide this endpoint so that clients can feature-detect rather than relying on per-archive configuration or probing.
 
         This endpoint MUST NOT require authentication, so that clients can read it before they sign in. The response MUST NOT vary by caller: it describes the deployment, not what a given user may do. If a request carries credentials, the implementation SHOULD ignore them rather than reject them.
 
@@ -117,6 +121,8 @@ paths:
               examples:
                 CapabilitiesResponse:
                   $ref: "#/components/examples/CapabilitiesResponse"
+                LightweightCapabilitiesResponse:
+                  $ref: "#/components/examples/LightweightCapabilitiesResponse"
         "429":
           $ref: "#/components/responses/RateLimitResponse"
         "500":
@@ -471,22 +477,40 @@ paths:
                     - basic
                     - advanced
                   default: basic
-                  description: Specifies the search method to be used. `basic` searches across common fields, whereas `advanced` can handle Boolean queries or more complex logic.
+                  description: |
+                    How `query` is read. `basic` is free text; `advanced` is the query grammar described under `query`.
+
+                    The search type MUST be one the implementation declares in `/capabilities` under `search.searchTypes`; any other value MUST be rejected with a 400 `ValidationError`. Every implementation supports `basic`; `advanced` is optional.
                 query:
                   type: string
                   description: |
-                    The query string used in the search. Behavior depends on `searchType`. For `basic`, this can be free text. For `advanced`, Boolean operators can be used.
+                    The query string. Its meaning depends on `searchType`, and is the same on every implementation that accepts it.
 
-                    When searchType is `basic` this is a free text field of text to search.
+                    An empty query — `""` or only whitespace — matches every Entity visible to the caller, for both search types. Filters, `boundingBox` and sorting still apply.
 
-                    When searchType is `advanced` this is a boolean search field.
+                    **Word matching.** Both search types match words the same way. Every word must be in the Entity, in any order, ignoring case. In basic search this applies to the whole query. In advanced search it applies to each value, and `AND`, `OR` and `NOT` combine the results. Implementations MAY also stem words, fold diacritics and ignore stop words, so `recording` may match `recordings`, and `Tok` may match `Tók`. Text in double quotes is a phrase: its words must be together, in that order.
+
+                    **Basic.** Free text, matched against fields the implementation chooses. Quoted phrases follow the rules above; a double quote with no closing partner is ignored. There are no operators: `AND`, `OR` and `NOT` are ordinary words. A basic query is never rejected for its syntax.
+
+                    **Advanced.** A query in this grammar:
+
+                    - `field: value` matches `value` in the named field, by the word-matching rules. The field name is the text before the `:`, back to the previous whitespace, bracket or start of the query. The field MUST be declared under `search.searchTypes.advanced.fields`; a query naming an undeclared field MUST be rejected with a 422 that names the field. Whitespace around `:` is not significant.
+                    - An unquoted value may be several words. It runs until the next operator, `)` or the end of the query. A `field:` inside an unquoted value MUST be rejected with a 422, so `name: West Alor description: linguistic` is an error, not one long value.
+                    - A value in double quotes is a phrase. Inside a phrase, `\"` is a double quote and `\\` is a backslash; any other backslash is literal. A `:` is literal only inside a phrase, so `description: "ratio 3:1"` searches for `3:1`.
+                    - A term with no field matches the fields that basic search uses.
+                    - `AND` and `OR` combine terms, and brackets group them. `NOT` comes before the term it negates: `A AND NOT B`, or `NOT A`. `A NOT B`, with no `AND`, MUST be rejected with a 422.
+                    - Precedence is `NOT`, then `AND`, then `OR`.
+                    - Operators are uppercase only. Lowercase `and`, `or` and `not` are words.
+                    - `field: (a OR b)` applies the field to every term in the brackets, and means `(field: a OR field: b)`.
+                    - There are no wildcards, fuzzy matching, regular expressions, ranges or boosts. Characters such as `*`, `~` and `^` are literal text.
+
+                    A query that does not parse, including one that is only `()` or only `NOT`, MUST be rejected with a 422 `ValidationError`.
+
                     Examples:
                       name: John
                       name: John AND description: Engineer
                       name: John AND (description: Engineer OR description: developer)
-
-                    NOTE: This API is implementation-agnostic. The examples above show basic boolean syntax that most search engines support.
-                    API implementors may support additional query syntax - refer to your implementation's documentation for details.
+                      name: "West Alor" AND NOT description: (draft OR test)
                 filters:
                   type: object
                   description: |
@@ -511,7 +535,10 @@ paths:
                     }
                 boundingBox:
                   type: object
-                  description: Will filter the results to entities that exist inside the bounding box.
+                  description: |
+                    Restricts results to Entities inside the box. Valid only when the implementation declares `search.geo.supported` as `true`; otherwise it MUST be rejected with a 400 `ValidationError`.
+
+                    When `bottomLeft.lng` is greater than `topRight.lng`, the box crosses the antimeridian: it covers the longitudes from `bottomLeft.lng` east to 180° and from -180° east to `topRight.lng`. Implementations that support geo MUST support such boxes. A box whose `bottomLeft.lat` is greater than `topRight.lat` MUST be rejected with a 400 `ValidationError`.
                   required:
                     - topRight
                     - bottomLeft
@@ -557,7 +584,10 @@ paths:
                   type: integer
                   minimum: 1
                   maximum: 12
-                  description: If supplied, returns a geohash grid with this precision. Must be between 1 (lowest precision) and 12 (highest precision).
+                  description: |
+                    Requests a `geohashGrid` at this precision, from 1 (lowest) to 12 (highest), over the matching Entities inside `boundingBox`.
+
+                    Requires `boundingBox`; a request with `geohashPrecision` and no `boundingBox` MUST be rejected with a 400 `ValidationError`. Like `boundingBox`, it is valid only when the implementation declares `search.geo.supported` as `true`.
                   example: 7
                 limit:
                   description: Maximum number of entities to return per page.
@@ -568,7 +598,10 @@ paths:
                   maximum: 1000
                   default: 100
                 offset:
-                  description: Number of items to skip before returning the results, enabling paging.
+                  description: |
+                    Number of items to skip before returning the results, enabling paging.
+
+                    When the implementation declares `search.maxResultWindow`, a request where `offset + limit` is greater than it MUST be rejected with a 400 `ValidationError`.
                   example: 100
                   type: integer
                   format: int32
@@ -576,18 +609,11 @@ paths:
                   default: 0
                 sort:
                   description: |
-                    The field on which to sort results. Defaults to `relevance`, which orders
-                    results by search score (highest first). When set to `relevance`, the
-                    `order` parameter is ignored. Use `id`, `name`, `createdAt`, or
-                    `updatedAt` to sort by a specific field.
+                    The sort: `relevance`, or one of the sorts the implementation declares in `/capabilities` under `sorts`. Any other value MUST be rejected with a 400 `ValidationError`.
+
+                    `relevance` is the implementation's best-match order. It need not follow `searchExtra.score`, and `order` is ignored. Like every declared sort, it MUST give the same order on every page of the same request, including with an empty query.
                   example: relevance
                   type: string
-                  enum:
-                    - id
-                    - name
-                    - createdAt
-                    - updatedAt
-                    - relevance
                   default: relevance
                 order:
                   description: |
@@ -600,6 +626,8 @@ paths:
             examples:
               SearchRequest:
                 $ref: "#/components/examples/SearchRequest"
+              AntimeridianSearchRequest:
+                $ref: "#/components/examples/AntimeridianSearchRequest"
 
       responses:
         "200":
@@ -615,7 +643,7 @@ paths:
                   - entities
                 properties:
                   total:
-                    description: Total number of entities (before pagination) matching the query.
+                    description: The exact number of Entities (before pagination) matching the query. Not an estimate or a lower bound.
                     type: integer
                     example: 42
                   searchTime:
@@ -630,11 +658,19 @@ paths:
                         - $ref: "#/components/schemas/SearchEntity"
                   facets:
                     type: object
-                    description: Contains facet counts for the search. Keys are facet fields, and values are arrays of objects indicating the facet name and count.
+                    description: |
+                      Facet counts for the search, keyed by the facet fields declared in `/capabilities` under `search.facets`. When the implementation declares any facets, `facets` MUST be present with every declared key; a facet with no matches has an empty array. When it declares none, `facets` MAY be omitted.
+
+                      Buckets for a `string` or `boolean` facet are ordered by `count`, highest first, with ties ordered by `name`.
+
+                      A `date` facet has one bucket per UTC year that has matches. `name` is the year as four digits, zero-padded (`"2001"`, `"0850"`), and buckets are ordered by year, oldest first.
                     additionalProperties:
                       type: array
                       items:
                         type: object
+                        required:
+                          - name
+                          - count
                         properties:
                           name:
                             type: string
@@ -652,7 +688,7 @@ paths:
                       }
                   geohashGrid:
                     type: object
-                    description: Present when boundingBox is used with a precision. Contains counts of entities in each geohash area. Keys are geohash values, and values are the count of entities in that area.
+                    description: Present when the request sends `boundingBox` and `geohashPrecision`. Counts of matching Entities in each geohash cell at the requested precision, keyed by geohash.
                     additionalProperties:
                       type: integer
                     example: { "r3": 30, "r6": 4 }
@@ -660,7 +696,7 @@ paths:
                 SearchResponse:
                   $ref: "#/components/examples/SearchResponse"
         "400":
-          description: Bad Request - Invalid search parameters
+          description: Bad Request - Invalid search parameters, or a search type, sort, filter, geo parameter or result window the implementation does not support
           content:
             application/json:
               schema:
@@ -673,14 +709,14 @@ paths:
         "403":
           $ref: "#/components/responses/ForbiddenResponse"
         "422":
-          description: Unprocessable Entity - Invalid query syntax
+          description: Unprocessable Entity - The query does not parse, or names an undeclared advanced field
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
               examples:
                 default:
-                  $ref: "#/components/examples/ValidationErrorResponse"
+                  $ref: "#/components/examples/QuerySyntaxErrorResponse"
         "429":
           $ref: "#/components/responses/RateLimitResponse"
         "500":
@@ -1805,15 +1841,11 @@ components:
     EntitySortParameter:
       name: sort
       in: query
-      description: Field to sort by, such as `name` or `createdAt`.
+      description: |
+        The sort: one of the sorts the implementation declares in `/capabilities` under `sorts`. Any other value, including `relevance`, MUST be rejected with a 400 `ValidationError`.
       example: id
       schema:
         type: string
-        enum:
-          - id
-          - name
-          - createdAt
-          - updatedAt
         default: id
     FileSortParameter:
       name: sort
@@ -1991,12 +2023,13 @@ components:
       description: Used to specify the order in sorting results.
     Capabilities:
       type: object
-      description: Declares what an implementation supports — the spec version it targets, whether it provides the optional deposit surface, the registered extensions it implements, and the search filters and facets it provides.
+      description: Declares what an implementation supports — the spec version it targets, whether it provides the optional deposit surface, the registered extensions it implements, the sorts it offers, and the search features it provides.
       required:
         - apiVersion
         - deposit
         - tombstonePolicy
         - extensions
+        - sorts
         - search
       properties:
         apiVersion:
@@ -2029,18 +2062,54 @@ components:
 
             REQUIRED of every implementation, whether or not it provides the deposit surface: entities and files are mandatory core, so any catalog may hold a URI that no longer resolves.
           example: "410"
+        sorts:
+          type: object
+          description: |
+            The sorts the implementation supports on `POST /search` and `GET /entities`, as a map of sort name to its declaration. A request using a sort not declared here MUST be rejected with a 400 `ValidationError`. Every sort supports both `asc` and `desc` order.
+
+            Every sort MUST give the same order on every page of the same request. The implementation chooses how to break ties (for example, by `id`).
+
+            `id`, the default for `GET /entities`, MUST be declared. `relevance` is not declared here: it is always available on `POST /search`, and never on `GET /entities`.
+          required:
+            - id
+          properties:
+            id:
+              $ref: "#/components/schemas/SortCapability"
+          propertyNames:
+            not:
+              const: relevance
+          additionalProperties:
+            $ref: "#/components/schemas/SortCapability"
+          example:
+            id:
+              label: Identifier
+            name:
+              label: Name
+            originatedOn:
+              label: Origination date
         search:
           $ref: "#/components/schemas/SearchCapability"
     SearchCapability:
       type: object
       description: |
-        Declares what the implementation's search endpoint supports — the filters that may be used in search requests and the facets returned in search responses.
+        Declares what the implementation's search endpoint supports — the search types, geo support, the filters that may be used in search requests and the facets returned in search responses.
 
-        Every field declared in `facets` MUST also be declared in `filters`, so that clients can always turn a facet value the user clicks into a filter on the next request. Filter-only fields (for example date fields, which are filterable but not meaningful as facets) are permitted.
+        Every field declared in `facets` MUST also be declared in `filters`, so that clients can always turn a facet value the user clicks into a filter on the next request (for a `date` facet, as a year range). Filter-only fields are permitted.
       required:
+        - searchTypes
+        - geo
         - filters
         - facets
       properties:
+        searchTypes:
+          $ref: "#/components/schemas/SearchTypesCapability"
+        geo:
+          $ref: "#/components/schemas/GeoCapability"
+        maxResultWindow:
+          type: integer
+          minimum: 1
+          description: The largest `offset + limit` that `POST /search` serves. A request past it MUST be rejected with a 400 `ValidationError`. Absent means no limit.
+          example: 10000
         filters:
           type: object
           description: The fields that may be used in the search request's `filters` object, as a map of field name to a declaration of the field's type and display label. Requests using a field not declared here MUST be rejected with a 400 `ValidationError`.
@@ -2057,13 +2126,77 @@ components:
               label: Date created
         facets:
           type: object
-          description: The facet fields the implementation supports in search responses, as a map of facet field name to its declaration. Every field listed here MUST also appear in `filters`.
+          description: |
+            The facet fields the implementation supports in search responses, as a map of facet field name to its declaration. Every field listed here MUST also appear in `filters`, with type `string`, `boolean` or `date`; a `number` filter cannot be a facet. An implementation that supports no facets declares `{}`.
+
+            A `date` facet's buckets are UTC years. To filter on one, a client sends the year as a range: `{ "gte": "2001-01-01", "lte": "2001-12-31" }`.
           additionalProperties:
             $ref: "#/components/schemas/FacetCapability"
           example:
             inLanguage:
               label: Language
             mediaType: {}
+    SearchTypesCapability:
+      type: object
+      description: |
+        The search types the implementation supports, as a map of search type to its details. Presence of a key means the search type is supported. `basic` is always present; `advanced` is optional.
+
+        A search request with a `searchType` not declared here MUST be rejected with a 400 `ValidationError`. New search types are added by revision of this specification; clients MUST ignore search types they do not recognise.
+      required:
+        - basic
+      properties:
+        basic:
+          type: object
+          description: Basic search. It has no details to communicate; the value is an empty object.
+        advanced:
+          $ref: "#/components/schemas/AdvancedSearchCapability"
+      example:
+        basic: {}
+        advanced:
+          fields:
+            name:
+              label: Title
+            description: {}
+    AdvancedSearchCapability:
+      type: object
+      description: Declares advanced search, and the fields an advanced query may name.
+      required:
+        - fields
+      properties:
+        fields:
+          type: object
+          description: The fields an advanced query may name, as a map of field name to its declaration. Every advanced field matches as text. A query naming a field not declared here MUST be rejected with a 422.
+          additionalProperties:
+            $ref: "#/components/schemas/AdvancedFieldCapability"
+    AdvancedFieldCapability:
+      type: object
+      description: Describes a field an advanced query may name.
+      properties:
+        label:
+          type: string
+          description: An optional human-readable display label for the field.
+          example: Title
+    GeoCapability:
+      type: object
+      description: |
+        Declares whether the implementation supports geo search: `boundingBox` and `geohashPrecision` in search requests, and `geohashGrid` in search responses. This block is REQUIRED: every implementation states its position explicitly.
+
+        When `supported` is `false`, a search request with `boundingBox` or `geohashPrecision` MUST be rejected with a 400 `ValidationError`.
+      required:
+        - supported
+      properties:
+        supported:
+          type: boolean
+          description: Whether geo search is provided.
+          example: true
+    SortCapability:
+      type: object
+      description: Describes a sort the implementation supports.
+      properties:
+        label:
+          type: string
+          description: An optional human-readable display label for the sort.
+          example: Name
     SegmentsCapability:
       type: object
       description: Details the implementation communicates about its `segments` support. The extension currently has no extra details to communicate; the value is an empty object.
@@ -2395,7 +2528,7 @@ components:
           properties:
             score:
               type: number
-              description: The relevance score for this entity, based on the search.
+              description: An optional, implementation-defined relevance score. Scores can be compared only within one response, and the `relevance` sort need not follow them.
             highlight:
               type: object
               additionalProperties:
@@ -2665,6 +2798,10 @@ components:
                         description: Validation error message
                       value:
                         description: The invalid value
+                      position:
+                        type: integer
+                        minimum: 0
+                        description: For an error in a search `query`, the 0-based offset, in Unicode code points, where the error was found. Optional.
                   example:
                     - field: limit
                       message: must be between 1 and 1000
@@ -2911,7 +3048,24 @@ components:
         tombstonePolicy: "410"
         extensions:
           segments: {}
+        sorts:
+          id:
+            label: "Identifier"
+          name:
+            label: "Name"
+          originatedOn:
+            label: "Origination date"
         search:
+          searchTypes:
+            basic: {}
+            advanced:
+              fields:
+                name:
+                  label: "Title"
+                description: {}
+          geo:
+            supported: true
+          maxResultWindow: 10000
           filters:
             inLanguage:
               type: "string"
@@ -2925,6 +3079,32 @@ components:
             inLanguage:
               label: "Language"
             mediaType: {}
+            createdAt:
+              label: "Date created"
+
+    LightweightCapabilitiesResponse:
+      summary: Example capabilities response from a lightweight implementation
+      value:
+        apiVersion: "0.4.0"
+        deposit:
+          supported: false
+        tombstonePolicy: "404"
+        extensions: {}
+        sorts:
+          id:
+            label: "Identifier"
+          name:
+            label: "Name"
+        search:
+          searchTypes:
+            basic: {}
+          geo:
+            supported: false
+          filters:
+            inLanguage:
+              type: "string"
+              label: "Language"
+          facets: {}
 
     EntityResponse:
       summary: Example entity response
@@ -3037,9 +3217,24 @@ components:
           bottomLeft:
             lat: -34.1
             lng: 150.9
+        geohashPrecision: 5
         limit: 20
         offset: 0
+        sort: "name"
         order: "desc"
+
+    AntimeridianSearchRequest:
+      summary: Example search across the antimeridian, around Fiji
+      value:
+        query: ""
+        boundingBox:
+          topRight:
+            lat: -12.0
+            lng: -178.0
+          bottomLeft:
+            lat: -21.0
+            lng: 176.0
+        geohashPrecision: 3
 
     SearchResponse:
       summary: Example search response with facets
@@ -3111,6 +3306,11 @@ components:
               count: 8
             - name: "text/plain"
               count: 7
+          createdAt:
+            - name: "1965"
+              count: 9
+            - name: "1972"
+              count: 6
         geohashGrid:
           r3gx: 5
           r3gy: 3
@@ -3130,6 +3330,20 @@ components:
                 message: "must be a valid URI"
                 value: "invalid-uri"
           requestId: "550e8400-e29b-41d4-a716-446655440000"
+
+    QuerySyntaxErrorResponse:
+      summary: Example advanced query syntax error
+      value:
+        error:
+          code: "VALIDATION_ERROR"
+          message: "Invalid query at position 28: expected a field value or opening bracket"
+          details:
+            violations:
+              - field: "query"
+                message: "expected a field value or opening bracket"
+                value: "name: John AND (description:"
+                position: 28
+          requestId: "550e8400-e29b-41d4-a716-446655440005"
 
     NotFoundErrorResponse:
       summary: Example not found error response

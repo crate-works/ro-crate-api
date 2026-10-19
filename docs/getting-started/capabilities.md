@@ -24,7 +24,20 @@ it instead of relying on per-archive configuration or probing responses.
   "extensions": {
     "segments": {}
   },
+  "sorts": {
+    "id": { "label": "Identifier" },
+    "name": { "label": "Name" },
+    "originatedOn": { "label": "Origination date" }
+  },
   "search": {
+    "searchTypes": {
+      "basic": {},
+      "advanced": {
+        "fields": { "name": { "label": "Title" }, "description": {} }
+      }
+    },
+    "geo": { "supported": true },
+    "maxResultWindow": 10000,
     "filters": {
       "inLanguage": { "type": "string", "label": "Language" },
       "mediaType": { "type": "string" },
@@ -32,7 +45,8 @@ it instead of relying on per-archive configuration or probing responses.
     },
     "facets": {
       "inLanguage": { "label": "Language" },
-      "mediaType": {}
+      "mediaType": {},
+      "createdAt": { "label": "Date created" }
     }
   }
 }
@@ -105,6 +119,67 @@ Detection is a simple key lookup: an archive supports segments exactly when
 [Extensions guide](/docs/extensions) for the extension model and the rules
 clients must follow.
 
+### `sorts`
+
+The sorts the implementation supports on `POST /search` and `GET /entities`,
+as a map of sort name to its declaration, with an optional display `label`.
+Build one sort menu from this map for search results and Entity lists. Every
+sort supports both `asc` and `desc`.
+
+`id` is always declared: it is the default for `GET /entities`. `relevance` is
+never declared: it is always available on `POST /search` (and is its default),
+and never on `GET /entities`. A request using any other sort that is not
+declared here is rejected with a 400 `ValidationError`.
+
+Every sort gives the same order on every page of the same request, so paging
+never repeats or skips an Entity. The implementation chooses how to break ties.
+
+### `search.searchTypes`
+
+The search types the implementation supports, as a map. Presence of a key
+means the search type is supported.
+
+- **`basic`** is always present, as an empty object. A basic query is free
+  text: every word must be in the Entity, in any order, ignoring case, and
+  text in double quotes is a phrase. It has no operators.
+- **`advanced`** is optional. When present, its `fields` map lists the fields
+  an advanced query may name, each with an optional display `label`. Build an
+  advanced search form from it. Every advanced field matches as text; use
+  `search.filters` for exact values, dates and ranges.
+
+A search request with an undeclared `searchType` is rejected with a 400
+`ValidationError`, so hide the advanced search toggle when `advanced` is
+absent. An advanced query that names an undeclared field is rejected with a
+422. The query grammar is in the
+[API reference](/docs/api/search-entities).
+
+Ignore search types you do not recognise; new ones are added by spec revision.
+
+### `search.geo`
+
+Whether the implementation supports geo search: `boundingBox` and
+`geohashPrecision` in the request, and `geohashGrid` in the response. This
+member is **required**. An implementation without geo declares:
+
+```json
+{ "geo": { "supported": false } }
+```
+
+Hide the map when `supported` is `false`: a request with `boundingBox` or
+`geohashPrecision` is rejected with a 400 `ValidationError`.
+
+When geo is supported, `geohashPrecision` needs a `boundingBox`. A box with
+`bottomLeft.lng` greater than `topRight.lng` crosses the antimeridian, which
+happens when a user pans the map across the Pacific. Such boxes are valid.
+
+### `search.maxResultWindow`
+
+The largest `offset + limit` that `POST /search` serves. A request past it is
+rejected with a 400 `ValidationError`. Absent means no limit.
+
+`total` is always exact, so it can be larger than the window. Stop page links
+at the window rather than at `total`.
+
 ### `search.filters`
 
 The fields that may be used in the search request's `filters` object, as a map
@@ -169,10 +244,44 @@ whose `type` you do not recognise; new types are added by spec revision.
 ### `search.facets`
 
 The facet fields the implementation supports in search, as a map of field name
-to its declaration, with an optional display `label`. Each field listed here
-appears in the search response's facet counts, and is guaranteed to also be
-declared in `search.filters` — so a facet value the user clicks can always be
-applied as a filter on the next request.
+to its declaration, with an optional display `label`. Each field listed here is
+guaranteed to also be declared in `search.filters`, with type `string`,
+`boolean` or `date`, so a facet value the user clicks can always be applied as
+a filter on the next request. A `number` filter cannot be a facet.
+
+An implementation that supports no facets declares `{}`, and its search
+responses may omit `facets`. Otherwise every search response includes
+`facets` with every declared key; a facet with no matches has an empty array.
+
+Buckets for a `string` or `boolean` facet are ordered by count, highest first,
+with ties ordered by name. A `date` facet has one bucket per UTC year that has
+matches, named with the year as four digits (zero-padded, so `"0850"`) and
+ordered oldest first:
+
+```json
+{
+  "facets": {
+    "createdAt": [
+      { "name": "1965", "count": 9 },
+      { "name": "1972", "count": 6 }
+    ]
+  }
+}
+```
+
+To filter on a date bucket, send its year as a range, not as an exact value.
+The exact value `"1965"` is a partial date, which is rejected:
+
+```json
+{
+  "filters": {
+    "createdAt": { "gte": "1965-01-01", "lte": "1965-12-31" }
+  }
+}
+```
+
+Several selected years become an array of ranges, as in
+[`search.filters`](#searchfilters).
 
 ## Using Capabilities
 
