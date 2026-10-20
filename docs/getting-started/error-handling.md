@@ -80,13 +80,13 @@ All error responses follow a consistent JSON structure:
       "violations": [
         {
           "field": "limit",
-          "message": "must be between 1 and 1000", 
+          "message": "must be between 1 and 1000",
           "value": 2000
         },
         {
-          "field": "conformsTo",
-          "message": "invalid profile URL",
-          "value": "invalid-url"
+          "field": "id",
+          "message": "must be a valid URI",
+          "value": "invalid-uri"
         }
       ]
     },
@@ -114,11 +114,8 @@ All error responses follow a consistent JSON structure:
 ```json
 {
   "error": {
-    "code": "AUTHENTICATION_REQUIRED",
-    "message": "Valid authentication credentials are required",
-    "details": {
-      "supportedMethods": ["ApiKey", "OAuth2", "OpenID"]
-    },
+    "code": "UNAUTHORIZED",
+    "message": "Authentication is required to access this resource",
     "requestId": "550e8400-e29b-41d4-a716-446655440001"
   }
 }
@@ -138,13 +135,8 @@ All error responses follow a consistent JSON structure:
 ```json
 {
   "error": {
-    "code": "INSUFFICIENT_PERMISSIONS",
+    "code": "FORBIDDEN",
     "message": "Access token does not have the required scope",
-    "details": {
-      "requiredScopes": ["read"],
-      "providedScopes": [],
-      "resource": "entities"
-    },
     "requestId": "550e8400-e29b-41d4-a716-446655440002"
   }
 }
@@ -178,10 +170,7 @@ All error responses follow a consistent JSON structure:
     "code": "RATE_LIMIT_EXCEEDED",
     "message": "Rate limit exceeded. Please retry after the specified time.",
     "details": {
-      "retryAfter": 60,
-      "limit": 1000,
-      "remaining": 0,
-      "resetTime": 1609459260
+      "retryAfter": 60
     },
     "requestId": "550e8400-e29b-41d4-a716-446655440004"
   }

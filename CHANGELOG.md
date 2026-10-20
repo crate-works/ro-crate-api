@@ -105,6 +105,11 @@ changes. Each breaking change says what to do.
 - The Capabilities guide said that every declared facet appears in the search
   response, but the response schema made `facets` optional. The search
   response description now states when `facets` must be present.
+- The Error Handling guide's 401, 403 and 429 examples now match the schemas
+  in `openapi.yaml`. They used the codes `AUTHENTICATION_REQUIRED` and
+  `INSUFFICIENT_PERMISSIONS` instead of `UNAUTHORIZED` and `FORBIDDEN`, and
+  `details` fields that the schemas do not define. The 400 example no longer
+  names `conformsTo`, which is not a parameter.
 - `GET /capabilities` is now public in `openapi.yaml`. It has no security
   requirement and no `401` or `403` responses. Before, it inherited the global
   security requirement, and the Authentication guide listed it under the
