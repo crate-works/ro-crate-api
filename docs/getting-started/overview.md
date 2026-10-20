@@ -67,10 +67,21 @@ curl https://data.ldaca.edu.au/api/entities
       "id": "https://catalog.paradisec.org.au/repository/LRB/001",
       "name": "Recordings of West Alor languages",
       "description": "A compilation of recordings featuring various West Alor languages",
-      "conformsTo": "https://w3id.org/ldac/profile#Collection",
-      "recordType": "RepositoryCollection",
-      "createdAt": "2023-01-01T12:00:00Z",
-      "updatedAt": "2023-01-02T12:00:00Z"
+      "entityType": "http://pcdm.org/models#Collection",
+      "memberOf": {
+        "id": "https://catalog.paradisec.org.au/repository/LRB",
+        "name": "Language Resources Bank"
+      },
+      "rootCollection": {
+        "id": "https://catalog.paradisec.org.au/repository/LRB",
+        "name": "Language Resources Bank"
+      },
+      "metadataLicenseId": "https://catalog.paradisec.org.au/licenses/metadata",
+      "contentLicenseId": "https://catalog.paradisec.org.au/licenses/content",
+      "access": {
+        "metadata": true,
+        "content": false
+      }
     }
   ]
 }

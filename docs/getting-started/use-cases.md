@@ -13,12 +13,12 @@ RO-Crate APIs.
 RO-Crate collections can be organised hierarchically. Here's how to navigate
 them:
 
-### Finding Root Collections
+### Finding Collections
 
-Start by finding top-level collections:
+Start by listing the collections:
 
 ```bash
-curl "https://data.ldaca.edu.au/api/entities?conformsTo=https://w3id.org/ldac/profile%23Collection&limit=20"
+curl "https://data.ldaca.edu.au/api/entities?entityType=http://pcdm.org/models%23Collection&limit=20"
 ```
 
 ### Exploring Sub-Collections

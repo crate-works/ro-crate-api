@@ -110,6 +110,10 @@ changes. Each breaking change says what to do.
   `INSUFFICIENT_PERMISSIONS` instead of `UNAUTHORIZED` and `FORBIDDEN`, and
   `details` fields that the schemas do not define. The 400 example no longer
   names `conformsTo`, which is not a parameter.
+- The Overview and Use Cases guides used `conformsTo` for an Entity's type.
+  The Use Cases guide now filters `GET /entities` with `entityType`. The
+  Overview guide's example Entity now has the fields in the `Entity` schema,
+  not `conformsTo`, `recordType`, `createdAt` and `updatedAt`.
 - `GET /capabilities` is now public in `openapi.yaml`. It has no security
   requirement and no `401` or `403` responses. Before, it inherited the global
   security requirement, and the Authentication guide listed it under the
